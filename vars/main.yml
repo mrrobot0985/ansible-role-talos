@@ -1,0 +1,15 @@
+---
+# vars file for talos
+# ──────────────────────────────────────────────────────────────
+# Working directories (runtime, not user-configurable)
+# ──────────────────────────────────────────────────────────────
+talos_config_dir: "{{ playbook_dir }}/.talos"
+talos_report_dir: "{{ playbook_dir }}/.talos/reports"
+talosconfig_path: "{{ talos_config_dir }}/talosconfig"
+
+# ──────────────────────────────────────────────────────────────
+# Derived paths (used internally by tasks)
+# ──────────────────────────────────────────────────────────────
+talos_secrets_path: "{{ talos_config_dir }}/config/secrets/secrets.yaml"
+talos_base_cp_path: "{{ talos_config_dir }}/config/base/controlplane.yaml"
+talos_base_worker_path: "{{ talos_config_dir }}/config/base/worker.yaml"

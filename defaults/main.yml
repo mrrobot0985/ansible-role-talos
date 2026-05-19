@@ -1,0 +1,37 @@
+---
+# defaults file for talos
+# ──────────────────────────────────────────────────────────────
+# Core Talos & cluster settings
+# ──────────────────────────────────────────────────────────────
+talosctl_version: v1.11.5
+cluster_name: "talos-cluster"
+talos_vip_rule: "-1"               # -1 = auto-calculate, else explicit VIP IP
+
+# ──────────────────────────────────────────────────────────────
+# Kubernetes API endpoint (used by talosctl gen config)
+# ──────────────────────────────────────────────────────────────
+cp_endpoint: "https://{{ hostvars[groups.talos_controlplane[0]].talos_ip }}:6443"
+
+# ──────────────────────────────────────────────────────────────
+# Optional per-node customizations (declarative, no code changes)
+# ──────────────────────────────────────────────────────────────
+talos_extensions: []                  # e.g. ["intel-ucode", "qemu-guest-agent"]
+talos_kernel_args: []                 # e.g. ["console=ttyS0", "talos.platform=metal"]
+cluster_ntp_servers: []               # e.g. ["time.google.com", "ntp.ubuntu.com"]
+
+# ──────────────────────────────────────────────────────────────
+# Runtime behavior
+# ──────────────────────────────────────────────────────────────
+talos_force_generate: false
+talos_apply_dry_run: true
+control_plane_workloads: false        # true → remove NoSchedule taint from CPs
+cluster_dns_domain: "cluster.local"   # Override DNS search domain
+cluster_dns_servers: []               # List of upstream DNS
+enable_essentials: false              # true → install metrics-server + local-path
+bootstrap_timeout: 1200               # Wait for nodes (seconds)
+report_timeout: 300                   # Wait for pods/API (seconds)
+
+# ──────────────────────────────────────────────────────────────
+# Additional packages
+# ──────────────────────────────────────────────────────────────
+yq_version: "v4.48.2"                  # or whatever version you want
