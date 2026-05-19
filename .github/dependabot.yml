@@ -1,0 +1,31 @@
+# .github/dependabot.yml
+version: 2
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "github_actions"
+
+  # Vagrant plugins (via ruby gems)
+  - package-ecosystem: "bundler"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # vagrant-libvirt is installed via apt in CI, not gem
+      - dependency-name: "vagrant-libvirt"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ruby"
+
+  # Optional: ansible-galaxy requirements (if you ever add one)
+  # - package-ecosystem: "ansible"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"

@@ -1,0 +1,92 @@
+---
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint & Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install lint tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible-core ansible-lint yamllint black flake8
+
+      - name: Run yamllint
+        run: yamllint .
+
+      - name: Run ansible-lint
+        run: ansible-lint
+
+      - name: Run black (check only)
+        run: black --check library/ filter_plugins/
+
+      - name: Run flake8
+        run: flake8 library/ filter_plugins/
+
+  integration:
+    name: Integration Test (headless)
+    needs: lint
+    runs-on: [self-hosted, linux, kvm]
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install make
+        run: sudo apt update -qq && sudo apt install -y make ansible
+
+      - name: Install system deps + Vagrant + talosctl
+        run: make install
+
+      - name: Ensure all resources are gone
+        run: make flush
+
+      - name: Up single-node Talos cluster
+        env:
+          CP_COUNT: 1
+          WORKER_COUNT: 0
+          TALOS_VERSION: v1.11.5
+        run: make up
+
+      - name: Test single-node Talos cluster
+        run: make test
+
+      - name: Upload Talos logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: talos-logs
+          path: .vagrant/talos-logs/
+
+      - name: Clean
+        run: make clean
+
+  publish:
+    name: Publish to Ansible Galaxy
+    needs: lint
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish role
+        uses: robertdebock/galaxy-action@1.2.1
+        with:
+          galaxy_api_key: ${{ secrets.GALAXY_API_KEY }}
