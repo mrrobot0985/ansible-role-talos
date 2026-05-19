@@ -1,0 +1,21 @@
+---
+# tasks file for talos – apply patched machine config
+# ──────────────────────────────────────────────────────────────
+# Apply per-node config (dry-run or real), wait for reboot & API
+# ──────────────────────────────────────────────────────────────
+- name: Apply config to node (use IP)
+  ansible.builtin.command: >-
+    talosctl apply-config --insecure
+    -n {{ talos_ip }}
+    --file {{ talos_config_dir }}/generated/{{ inventory_hostname }}.yaml
+  delegate_to: localhost
+  when: not (talos_apply_dry_run | bool)
+  register: apply_result
+  changed_when: apply_result.rc == 0 and not (talos_apply_dry_run | bool)
+  failed_when: >-
+    apply_result.rc != 0 and
+    not (talos_apply_dry_run | bool and 'dry-run' in apply_result.stderr)
+  tags: [apply-config]
+
+- import_tasks: 41-wait.yml
+  tags: [apply-config, wait]

@@ -1,0 +1,135 @@
+---
+# ──────────────────────────────────────────────────────────────
+# Step 2: Gather all resources using correct auth (mTLS when booted)
+# ──────────────────────────────────────────────────────────────
+- name: Get disks
+  talos_get_resource:
+    talos_ip: "{{ talos_ip }}"
+    resource: disks
+    parse_mode: ndjson_dict
+    insecure: "{{ is_maintenance }}"
+    talosconfig: "{{ talos_config_dir }}/config/base/talosconfig"
+  register: _disks
+  delegate_to: localhost
+  tags: [facts, resources]
+
+- name: Get machineconfig
+  talos_get_resource:
+    talos_ip: "{{ talos_ip }}"
+    resource: machineconfig.v1alpha1
+    namespace: config
+    parse_mode: json_single
+    insecure: "{{ is_maintenance }}"
+    talosconfig: "{{ talos_config_dir }}/config/base/talosconfig"
+  register: _mc
+  ignore_errors: true
+  delegate_to: localhost
+  tags: [facts, resources]
+
+- name: Get machine status (to detect maintenance mode)
+  talos_get_resource:
+    talos_ip: "{{ talos_ip }}"
+    resource: machinestatus
+    parse_mode: json_single
+    insecure: true
+  register: _ms
+  delegate_to: localhost
+  ignore_errors: true
+  tags: [facts, resources]
+
+- name: Get version
+  talos_get_resource:
+    talos_ip: "{{ talos_ip }}"
+    resource: version
+    parse_mode: json_single
+    insecure: "{{ is_maintenance }}"
+    talosconfig: "{{ talos_config_dir }}/config/base/talosconfig"
+  register: _ver
+  delegate_to: localhost
+  tags: [facts, resources]
+
+- name: Get network links
+  talos_get_resource:
+    talos_ip: "{{ talos_ip }}"
+    resource: links
+    parse_mode: ndjson_dict
+    insecure: "{{ is_maintenance }}"
+    talosconfig: "{{ talos_config_dir }}/config/base/talosconfig"
+  register: _links
+  delegate_to: localhost
+  tags: [facts, resources]
+
+- name: Get IP addresses
+  talos_get_resource:
+    talos_ip: "{{ talos_ip }}"
+    resource: addresses
+    parse_mode: ndjson_dict
+    insecure: "{{ is_maintenance }}"
+    talosconfig: "{{ talos_config_dir }}/config/base/talosconfig"
+  register: _addrs
+  delegate_to: localhost
+  tags: [facts, resources]
+
+- name: Get time servers
+  talos_get_resource:
+    talos_ip: "{{ talos_ip }}"
+    resource: timeservers
+    parse_mode: json_single
+    insecure: "{{ is_maintenance }}"
+    talosconfig: "{{ talos_config_dir }}/config/base/talosconfig"
+  register: _ts
+  delegate_to: localhost
+  tags: [facts, resources]
+
+- name: Get kernel param status
+  talos_get_resource:
+    talos_ip: "{{ talos_ip }}"
+    resource: kernelparamstatus
+    parse_mode: ndjson_dict
+    insecure: "{{ is_maintenance }}"
+    talosconfig: "{{ talos_config_dir }}/config/base/talosconfig"
+  register: _kp
+  delegate_to: localhost
+  tags: [facts, resources]
+
+# ──────────────────────────────────────────────────────────────
+# Assemble and process facts
+# ──────────────────────────────────────────────────────────────
+- name: Assemble talos_facts
+  ansible.builtin.set_fact:
+    talos_facts:
+      disks: "{{ _disks.ansible_facts.talos_disks | default({}) }}"
+      machineconfig: "{{ _mc.ansible_facts.talos_machineconfig_v1alpha1 | default({}) }}"
+      version: "{{ _ver.ansible_facts.talos_version | default({}) }}"
+      links: "{{ _links.ansible_facts.talos_links | default({}) }}"
+      addresses: "{{ _addrs.ansible_facts.talos_addresses | default({}) }}"
+      timeservers: "{{ _ts.ansible_facts.talos_timeservers | default({}) }}"
+      machinestatus: "{{ _ms.ansible_facts.talos_machinestatus | default({}) }}"
+      kernelparamstatus: "{{ _kp.ansible_facts.talos_kernelparamstatus | default({}) }}"
+  tags: [facts, resources]
+
+- name: Process talos_facts
+  ansible.builtin.set_fact:
+    talos_facts: "{{ talos_facts | process_talos_facts(inventory_hostname, hostvars[inventory_hostname]) }}"
+  tags: [facts, resources]
+
+- name: Aggregate global IPv4 from all nodes (maintenance only)
+  ansible.builtin.set_fact:
+    all_global_ipv4: >-
+      {{
+        groups.all
+        | map('extract', hostvars, ['talos_facts', 'global_addresses'])
+        | flatten | list
+        | selectattr('family', 'equalto', 'inet4')
+        | map(attribute='address') | flatten | list
+      }}
+  run_once: true
+  tags: [facts, resources]
+
+- name: Fail if no global IPv4 (maintenance only)
+  ansible.builtin.fail:
+    msg: "No global IPv4 addresses found on any node"
+  when:
+    - all_global_ipv4 | length == 0
+  run_once: true
+  tags: [facts, resources]

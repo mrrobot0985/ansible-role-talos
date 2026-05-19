@@ -1,0 +1,32 @@
+---
+# roles/talos/tasks/main.yml
+# ──────────────────────────────────────────────────────────────
+# Main entry point
+# ──────────────────────────────────────────────────────────────
+- import_tasks: 00-setup.yml
+  tags: setup
+
+- import_tasks: 10-config.yml
+  tags: config
+
+- import_tasks: 20-facts.yml
+  tags: facts
+
+- import_tasks: 30-patch.yml
+  tags: patch
+
+- import_tasks: 40-apply.yml
+  tags: apply-config
+
+- import_tasks: 50-bootstrap.yml
+  tags: bootstrap
+
+- name: Cluster is READY
+  ansible.builtin.debug:
+    msg: >-
+      Talos cluster is up and running with {{ groups.all | length }} nodes!
+      {% if talos_vip is defined and talos_vip | length > 0 %}
+      VIP: {{ talos_vip }}
+      {% else %}
+      Single-cp mode (no VIP){%- endif %}
+  run_once: true

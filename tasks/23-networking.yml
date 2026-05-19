@@ -1,0 +1,33 @@
+---
+# ──────────────────────────────────────────────────────────────
+# VIP calculation
+# ──────────────────────────────────────────────────────────────
+- name: Run Talos Network Module
+  talos_network_module:
+    all_global_ips: "{{ all_global_ipv4 }}"
+    vip_rule: "{{ talos_vip_rule | default('-1') }}"
+    total_nodes: "{{ groups.all | length }}"
+    control_plane_count: "{{ groups.talos_controlplane | length }}"
+  register: talos_network_global
+  run_once: true
+  delegate_to: localhost
+  tags: [facts, networking]
+
+- name: Set global VIP fact from network module
+  ansible.builtin.set_fact:
+    talos_vip: "{{ talos_network_global.vip }}"
+    talos_cluster_subnet: "{{ talos_network_global.cluster_subnet }}"
+  run_once: true
+  delegate_to: localhost
+  tags: [facts, networking]
+
+- name: Inject VIP into talos_facts so patch module can see it
+  ansible.builtin.set_fact:
+    talos_facts: "{{ talos_facts | combine({'vip': talos_vip, 'cluster_subnet': talos_cluster_subnet}) }}"
+  when: talos_vip is defined and talos_vip | length > 0
+  tags: [facts, networking]
+
+- name: Set talos_ip
+  ansible.builtin.set_fact:
+    talos_ip: "{{ hostvars[inventory_hostname]['talos_ip'] | default(hostvars[inventory_hostname]['ansible_host']) }}"
+  tags: [facts, networking]

@@ -1,0 +1,16 @@
+---
+# ──────────────────────────────────────────────────────────────
+# Node report
+# ──────────────────────────────────────────────────────────────
+- name: Set talos_ip
+  ansible.builtin.set_fact:
+    talos_ip: "{{ hostvars[inventory_hostname]['talos_ip'] | default(hostvars[inventory_hostname]['ansible_host']) }}"
+  tags: [facts, node_report]
+
+- name: Generate node report
+  ansible.builtin.template:
+    src: node_report.j2
+    dest: "{{ talos_report_dir }}/{{ cluster_name }}/node_{{ inventory_hostname }}.md"
+    mode: '0644'
+  delegate_to: localhost
+  tags: [facts, node_report]

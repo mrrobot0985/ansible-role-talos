@@ -1,0 +1,66 @@
+---
+
+# ──────────────────────────────────────────────────────────────
+# Control Plane: Wait for API to go down, then come back
+# ──────────────────────────────────────────────────────────────
+- name: Wait for control plane node to go down (API unreachable)
+  talos_wait:
+    mode: api
+    host: "{{ talos_ip }}"
+    port: 50000
+    expect_open: false
+    timeout: 300
+    delay: 10
+  delegate_to: localhost
+  when:
+    - not talos_apply_dry_run | bool
+    - inventory_hostname in groups['talos_controlplane']
+  tags: [apply-config, wait]
+
+- name: Wait for control plane node to come back up (API reachable)
+  talos_wait:
+    mode: api
+    host: "{{ talos_ip }}"
+    port: 50000
+    expect_open: true
+    timeout: 600
+    delay: 15
+  delegate_to: localhost
+  when:
+    - not talos_apply_dry_run | bool
+    - inventory_hostname in groups['talos_controlplane']
+  tags: [apply-config, wait]
+
+# ──────────────────────────────────────────────────────────────
+# Worker: Wait for Talos API (port 50000) after reboot
+# ──────────────────────────────────────────────────────────────
+- name: Wait for worker Talos API to be reachable after reboot
+  talos_wait:
+    mode: api
+    host: "{{ talos_ip }}"
+    port: 50000
+    expect_open: true
+    timeout: 600
+    delay: 15
+  delegate_to: localhost
+  when:
+    - not talos_apply_dry_run | bool
+    - inventory_hostname not in groups['talos_controlplane']
+  tags: [apply-config, wait]
+
+# ──────────────────────────────────────────────────────────────
+# Final: Confirm API is up for control plane nodes only
+# ──────────────────────────────────────────────────────────────
+- name: Wait for control plane API to be reachable (final check)
+  talos_wait:
+    mode: api
+    host: "{{ talos_ip }}"
+    port: 50000
+    expect_open: true
+    timeout: 300
+    delay: 15
+  delegate_to: localhost
+  when:
+    - not talos_apply_dry_run | bool
+    - inventory_hostname in groups['talos_controlplane']
+  tags: [apply-config, wait]

@@ -1,0 +1,41 @@
+---
+# ──────────────────────────────────────────────────────────────
+# Patch the node configurations
+# ──────────────────────────────────────────────────────────────
+- name: Generate per-node JSON patch
+  talos_patch_module:
+    talos_facts: "{{ talos_facts }}"
+    inventory_hostname: "{{ inventory_hostname }}"
+    is_controlplane: "{{ inventory_hostname in groups.talos_controlplane }}"
+    cluster_dns_servers: "{{ talos_cluster_dns | default([]) }}"
+    cluster_ntp_servers: "{{ talos_cluster_ntp | default([]) }}"
+    patch_dir: "{{ talos_config_dir }}/patches/nodes"
+    customization: "{{ customization | default({}) }}"
+    total_controlplanes: "{{ groups.talos_controlplane | length }}"
+    total_workers: "{{ (groups.talos_workers | default([])) | length }}"
+  register: patch_result
+  delegate_to: localhost
+  tags: [patch]
+
+- name: Apply patch to base config (handle multi-document YAML)
+  ansible.builtin.shell: |
+    set -eu
+    TYPE="{{ 'controlplane' if inventory_hostname in groups.talos_controlplane else 'worker' }}"
+    BASE="{{ talos_config_dir }}/config/base/${TYPE}.yaml"
+    OUT="{{ talos_config_dir }}/generated/{{ inventory_hostname }}.yaml"
+    TMP="$(mktemp)"
+    # Extract only the first YAML document (machine + cluster config) so
+    # talosctl machineconfig patch can process it.  v1.12+ gen config
+    # always outputs multi-document YAML which machineconfig patch rejects.
+    yq eval 'select(document_index == 0)' "$BASE" > "$TMP"
+    talosctl machineconfig patch "$TMP" --patch @{{ patch_result.patch_file }} -o "$OUT"
+    rm -f "$TMP"
+    # Append any trailing documents (e.g. HostnameConfig) unchanged.
+    EXTRA=$(yq eval 'select(document_index > 0)' "$BASE" 2>/dev/null || true)
+    if [ -n "$EXTRA" ]; then
+      printf '%s\n' '---' "$EXTRA" >> "$OUT"
+    fi
+  args:
+    creates: "{{ talos_config_dir }}/generated/{{ inventory_hostname }}.yaml"
+  delegate_to: localhost
+  tags: [patch]

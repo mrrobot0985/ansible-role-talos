@@ -1,0 +1,31 @@
+---
+# tasks file for talos – gather and process node facts
+
+- name: Wait for Talos API port 50000
+  ansible.builtin.wait_for:
+    host: "{{ talos_ip }}"
+    port: 50000
+    state: started
+    timeout: 300
+    delay: 15
+  delegate_to: localhost
+  tags: facts
+
+- name: Set apply mode based on dry-run flag
+  ansible.builtin.set_fact:
+    talos_apply_mode: >-
+      {{ 'dry-run' if talos_apply_dry_run | bool else 'auto' }}
+  run_once: false
+  tags: [apply-config]
+
+- import_tasks: 21-machinestatus.yml
+  tags: [facts, machinestatus]
+
+- import_tasks: 22-resources.yml
+  tags: [facts, resources]
+
+- import_tasks: 23-networking.yml
+  tags: [facts, networking]
+
+- import_tasks: 24-report.yml
+  tags: [facts, node_report]

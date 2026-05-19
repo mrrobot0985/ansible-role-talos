@@ -1,0 +1,18 @@
+---
+- name: Install talosctl
+  ansible.builtin.get_url:
+    url: >-
+      https://github.com/siderolabs/talos/releases/download/{{ talosctl_version }}/talosctl-linux-{{
+        'arm64' if ansible_architecture == 'aarch64' else 'amd64'
+      }}
+    dest: /usr/local/bin/talosctl
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  tags: [setup, talosctl]
+
+- name: Verify talosctl
+  ansible.builtin.command: talosctl version --client
+  changed_when: false
+  tags: [setup, talosctl]

@@ -1,0 +1,62 @@
+---
+# tasks file for talos – generate secrets & base config
+# ──────────────────────────────────────────────────────────────
+# Create encrypted secrets and base Talos configs (idempotent)
+# ──────────────────────────────────────────────────────────────
+
+- name: Check if Talos secrets file exists
+  ansible.builtin.stat:
+    path: "{{ talos_config_dir }}/config/secrets/secrets.yaml"
+  register: secrets_stat
+  run_once: true
+  delegate_to: localhost
+  tags: config
+
+- name: Generate Talos secrets
+  talos_gen_secrets:
+    output_file: "{{ talos_config_dir }}/config/secrets/secrets.yaml"
+    force: "{{ talos_force_generate | default(false) | bool }}"
+  when: talos_force_generate | default(false) | bool or not secrets_stat.stat.exists
+  run_once: true
+  delegate_to: localhost
+  tags: config
+
+- name: Check if base Talos config exists
+  ansible.builtin.stat:
+    path: "{{ talos_config_dir }}/config/base/controlplane.yaml"
+  register: base_stat
+  run_once: true
+  delegate_to: localhost
+  tags: config
+
+- name: Generate base Talos config
+  talos_gen_config:
+    cluster_name: "{{ cluster_name }}"
+    endpoint: "{{ cp_endpoint }}"
+    output_dir: "{{ talos_config_dir }}/config/base"
+    secrets_file: "{{ talos_config_dir }}/config/secrets/secrets.yaml"
+    force: "{{ talos_force_generate | default(false) | bool }}"
+  when: talos_force_generate | default(false) | bool or not base_stat.stat.exists
+  run_once: true
+  delegate_to: localhost
+  tags: config
+
+- name: Set permissions on secrets
+  ansible.builtin.file:
+    path: "{{ talos_config_dir }}/config/secrets/secrets.yaml"
+    mode: '0600'
+  run_once: true
+  delegate_to: localhost
+  tags: config
+
+- name: Set permissions on base configs
+  ansible.builtin.file:
+    path: "{{ talos_config_dir }}/config/base/{{ item }}"
+    mode: '0600'
+  loop:
+    - controlplane.yaml
+    - worker.yaml
+    - talosconfig
+  run_once: true
+  delegate_to: localhost
+  tags: config

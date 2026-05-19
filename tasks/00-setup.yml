@@ -1,0 +1,60 @@
+---
+# localhost setup – tools & dirs (final, actually minimal)
+
+- name: Create .talos directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0700"
+  loop:
+    - "{{ talos_config_dir }}/config/base"
+    - "{{ talos_config_dir }}/config/secrets"
+    - "{{ talos_config_dir }}/patches/nodes"
+    - "{{ talos_config_dir }}/generated"
+    - "{{ talos_report_dir }}/{{ cluster_name }}"
+  run_once: true
+  delegate_to: localhost
+  tags: setup
+
+- name: Ignore .talos in git
+  ansible.builtin.copy:
+    content: |
+      ## Talos config
+      .talos/
+    dest: "{{ playbook_dir }}/.gitignore"
+    mode: "0644"
+  run_once: true
+  delegate_to: localhost
+  tags: setup
+
+- name: Encrypt .talos with vault
+  ansible.builtin.command: ansible-vault encrypt {{ talos_config_dir }}
+  args:
+    creates: "{{ talos_config_dir }}/.vault"
+  environment:
+    ANSIBLE_VAULT_PASSWORD_FILE: "{{ vault_pass_file | default('.vault_pass') }}"
+  when: encrypt_talos_dir | default(false)
+  run_once: true
+  delegate_to: localhost
+  tags: setup
+
+- name: Ensure /usr/local/bin is in PATH
+  ansible.builtin.lineinfile:
+    path: /etc/environment
+    regexp: '^PATH='
+    line: 'PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"'
+    backup: yes
+  become: true
+  tags: [setup]
+
+- import_tasks: 01-talosctl.yml
+  run_once: true
+  tags: [setup, talosctl]
+
+- import_tasks: 02-kubectl.yml
+  run_once: true
+  tags: [setup, kubectl]
+
+- import_tasks: 03-yq.yml
+  run_once: true
+  tags: [setup, yq]
