@@ -3,6 +3,7 @@
 .talos/*
 
 # === Ansible runtime / cache ===
+.ansible/
 .cache/
 .tox/
 .molecule/
@@ -62,3 +63,4 @@ hosts/
 # === Claude / project-local instructions ===
 .claude/
 CLAUDE.md
+.mcp.json
