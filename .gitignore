@@ -1,0 +1,64 @@
+# === Talos generated / working directory (MUST be ignored) ===
+.talos/
+.talos/*
+
+# === Ansible runtime / cache ===
+.cache/
+.tox/
+.molecule/
+ansible.log
+*.retry
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+
+# === Python / dev tools ===
+.venv/
+venv/
+.env
+.env.local
+pip-wheel-metadata/
+*.egg-info/
+dist/
+build/
+*.dist-info/
+
+# === IDE / editor junk ===
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# === Local testing / overrides ===
+inventory.local
+host_vars/localhost.yml
+group_vars/local.yml
+*.vault
+vault-pass.txt
+
+# === Temporary files ===
+tmp/
+temp/
+*.tmp
+*.bak
+
+# === CI / Galaxy build artifacts ===
+*.tar.gz
+galaxy.yml.bak
+
+# === Data directory ===
+data/
+
+# === Vagrant directory ===
+.vagrant
+
+# === Hosts directory ===
+hosts/
+
+# === Claude / project-local instructions ===
+.claude/
+CLAUDE.md
