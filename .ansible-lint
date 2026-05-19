@@ -1,0 +1,10 @@
+# .ansible-lint — Talos production profile
+profile: production  # Strict idempotency
+
+skip_list:  # Justified for talosctl (immutable OS, JSON patching)
+  - fqcn[action-core]  # Short names for brevity
+  - command-instead-of-shell  # talosctl requires shell piping
+  - no-changed-when  # talosctl apply lacks changed_when
+  - name[missing]  # Imports named at file level
+  - role-name[path]  # Tests use relative paths
+  - risky-shell-pipe  # Local talosctl only

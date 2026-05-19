@@ -1,0 +1,19 @@
+# .yamllint
+extends: default
+
+ignore: |
+  .talos/
+  .vagrant/
+  .claude/
+  .ansible/
+
+rules:
+  line-length:
+    max: 130
+    level: warning
+  document-start: disable
+  comments-indentation: disable
+  truthy: disable
+  brackets:
+    max-spaces-inside: 1
+    level: error
