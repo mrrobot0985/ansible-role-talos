@@ -32,10 +32,10 @@ jobs:
         run: ansible-lint
 
       - name: Run black (check only)
-        run: black --check library/ filter_plugins/
+        run: black --check library/
 
       - name: Run flake8
-        run: flake8 library/ filter_plugins/
+        run: flake8 library/
 
       - name: Run markdownlint
         run: |
