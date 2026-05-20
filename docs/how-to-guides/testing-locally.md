@@ -49,10 +49,19 @@ CP_COUNT=3 WORKER_COUNT=2 TALOS_VERSION=v1.11.5 make up
 - **scripts/generate-vnc.sh** — Detects VNC clients and ports, generates `.vagrant/open-vnc.sh`.
 - **scripts/flush-libvirt.sh** — Nukes all non-default libvirt resources and restores defaults.
 
+## File Explanations
+
+- **Vagrantfile** — Defines VMs (cp-* and worker-*), downloads Talos ISO, configures libvirt (nested virt, serial logs in `.vagrant/talos-logs`). No provisioning; relies on Ansible for config.
+- **Makefile** — Central orchestrator with defaults and env overrides. Chains commands (e.g., `up` calls inventory + VNC).
+- **scripts/install-deps.sh** — Installs packages/groups; loads KVM module.
+- **scripts/generate-inventory.sh** — Scans running VMs via `virsh`, waits for IPs, generates `.vagrant/inventory.yml` with `talos_controlplane`/`talos_workers` groups and `cluster_name: vagrant`.
+- **scripts/generate-vnc.sh** — Detects VNC clients, gets ports via `virsh dumpxml`, generates executable `.vagrant/open-vnc.sh` to launch consoles. Supports VNC_PASSWORD env.
+- **scripts/flush-libvirt.sh** — Nukes all non-default libvirt resources (domains, volumes, pools, networks); restores defaults.
+
 ## Troubleshooting
 
 - **No IPs in inventory**: Run `make inventory` after VMs boot (DHCP takes ~10s).
 - **VNC fails**: Install Remmina; check `.vagrant/open-vnc.sh` for commands.
 - **Libvirt errors**: Run `make flush`; ensure groups applied (`newgrp libvirt kvm`).
-- **Test fails**: Check Talos logs in `.vagrant/talos-logs`; ensure `talosctl` is in PATH.
-- **Custom ISO**: Override `TALOS_VERSION`.
+- **Test fails**: Check Talos logs in `.vagrant/talos-logs`; ensure `talosctl` in PATH.
+- **Custom ISO**: Override `TALOS_VERSION` env.

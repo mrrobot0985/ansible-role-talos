@@ -9,8 +9,7 @@ all:
     talos_controlplane:
       hosts:
         cp-1:
-          ansible_connection: local
-          talos_ip: 192.168.121.82
+          ansible_host: 192.168.121.82
           node_type: controlplane
   vars:
     cluster_name: mytalos
@@ -25,26 +24,21 @@ all:
     talos_controlplane:
       hosts:
         cp-1:
-          ansible_connection: local
-          talos_ip: 10.255.0.3
+          ansible_host: 10.255.0.3
           node_type: controlplane
         cp-2:
-          ansible_connection: local
-          talos_ip: 10.255.0.4
+          ansible_host: 10.255.0.4
           node_type: controlplane
         cp-3:
-          ansible_connection: local
-          talos_ip: 10.255.0.5
+          ansible_host: 10.255.0.5
           node_type: controlplane
     talos_workers:
       hosts:
         worker-1:
-          ansible_connection: local
-          talos_ip: 10.255.0.6
+          ansible_host: 10.255.0.6
           node_type: worker
         worker-2:
-          ansible_connection: local
-          talos_ip: 10.255.0.7
+          ansible_host: 10.255.0.7
           node_type: worker
   vars:
     cluster_name: ha-cluster
@@ -53,6 +47,7 @@ all:
 
 ## Important Notes
 
-- Every node **must** have `ansible_connection: local` (all tasks delegate to localhost)
-- Every node **must** have `talos_ip` set to the node's reachable IP in maintenance mode
-- `node_type` is optional but recommended; the role auto-detects from group membership
+- Inventory hosts need only `ansible_host` (the node's reachable IP in maintenance mode)
+- `talos_ip` is optional and defaults to `ansible_host`; use it only when the target IP differs from the inventory host (e.g. NAT, proxy, or dual-homed nodes)
+- `node_type` is optional; the role auto-detects from group membership (`talos_controlplane` vs `talos_workers`)
+- `ansible_connection: local` is **not** required; the role uses `delegate_to: localhost` internally for all `talosctl` and `kubectl` operations

@@ -19,6 +19,7 @@ Use Ansible tags to run specific phases of the role pipeline.
 | `talosctl` | Install/update talosctl only |
 | `kubectl` | Install/update kubectl only |
 | `yq` | Install/update yq only |
+| `mkdocs` | Install/update mkdocs-material only (docs opt-in) |
 
 ## Example
 

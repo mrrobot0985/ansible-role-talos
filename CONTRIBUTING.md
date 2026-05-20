@@ -34,8 +34,8 @@ Thank you for considering contributing! This role is actively maintained and all
    ```bash
    ansible-lint .
    yamllint .
-   black --check library/ filter_plugins/
-   flake8 library/ filter_plugins/
+   black --check filter_plugins/ tests/
+   flake8 filter_plugins/ tests/
    ```
 
 6. **Open a Pull Request**
@@ -46,7 +46,6 @@ Thank you for considering contributing! This role is actively maintained and all
 
 ## Development Notes
 
-- Custom Python modules live in `library/`
 - Filter plugins live in `filter_plugins/`
 - All new features should preserve backward compatibility when possible
 - Documentation updates (README, reports) are highly valued

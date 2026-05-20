@@ -61,9 +61,9 @@ vars:
 ansible-playbook -i inventory.yml site.yml
 ```
 
-Review `.talos/generated/` and `.generated/` before applying.
+Review `.talos/generated/` before applying.
 
-`.generated/` contains browsable documentation with the Material theme — run `cd .generated && mkdocs serve` to preview.
+When `talos_generate_docs: true`, `.talos/generated/` contains browsable documentation with the Material theme — run `cd .talos/generated && mkdocs serve` to preview.
 
 ## Step 4 — Deploy
 

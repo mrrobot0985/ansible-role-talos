@@ -6,7 +6,7 @@ This tutorial walks you through running the role against local Talos VMs using t
 
 - 1 control-plane node booted from the Talos ISO
 - 3 worker nodes booted from the Talos ISO
-- A `.generated/` documentation site with live node facts
+- A `.talos/generated/` documentation site with live node facts (when docs are enabled)
 
 ## Prerequisites
 
@@ -41,10 +41,10 @@ The role gathers live facts from every VM, generates machineconfigs, and writes 
 
 ## Step 4 -- Review Generated Documentation
 
-The role writes browsable documentation to `.generated/`:
+The role writes browsable documentation to `.talos/generated/` (when `talos_generate_docs: true`):
 
 ```bash
-cd .generated
+cd .talos/generated
 mkdocs serve
 ```
 

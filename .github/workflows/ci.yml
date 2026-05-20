@@ -43,7 +43,7 @@ jobs:
       - name: Run markdownlint
         run: |
           npm install -g markdownlint-cli
-          markdownlint docs/ README.md TESTING.md CONTRIBUTING.md
+          markdownlint docs/ README.md CONTRIBUTING.md
 
   dry-run:
     name: Dry-Run Config Generation

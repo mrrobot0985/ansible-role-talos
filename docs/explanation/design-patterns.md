@@ -6,7 +6,7 @@ Talos Linux has no SSH daemon, no package manager, and no writable root filesyst
 
 ## localhost Delegation
 
-Every task in the role runs on `localhost` (the Ansible control node). Inventory entries use `ansible_connection: local` plus `talos_ip` to tell the control node which node to reach. This is clunky but necessary because Talos does not expose SSH.
+Every task that invokes `talosctl` or `kubectl` runs on `localhost` (the Ansible control node) via `delegate_to: localhost`. Inventory hosts need only `ansible_host` (and optionally `talos_ip`); `ansible_connection: local` is not required. This is intentional because Talos is immutable and does not expose SSH.
 
 ## Dry-Run by Default
 
