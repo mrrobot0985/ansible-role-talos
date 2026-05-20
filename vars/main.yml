@@ -4,7 +4,6 @@
 # Working directories (runtime, not user-configurable)
 # ──────────────────────────────────────────────────────────────
 talosconfig_path: "{{ talos_config_dir }}/talosconfig"
-talos_ip: "{{ hostvars[inventory_hostname]['talos_ip'] | default(hostvars[inventory_hostname]['ansible_host']) }}"
 
 # ──────────────────────────────────────────────────────────────
 # Derived paths (used internally by tasks)

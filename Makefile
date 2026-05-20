@@ -75,6 +75,7 @@ test:
 clean:
 	@echo "[+] Full cleanup..."
 	-sg libvirt -c '$(VAGRANT) destroy -f' 2>/dev/null || true
+	@sg libvirt -c 'virsh vol-list default --details | awk "NR>2 && /$(PROJECT_PREFIX)/{print \$$1}" | while read vol; do virsh vol-delete --pool default "$$vol" 2>/dev/null || true; done' 2>/dev/null || true
 	@rm -rf .vagrant ./tests/.talos 2>/dev/null || true
 	@echo "[+] Done."
 

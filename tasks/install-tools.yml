@@ -130,8 +130,8 @@
 - name: Install yq
   ansible.builtin.get_url:
     url: >-
-      https://github.com/mikefarah/yq/releases/download/{{ yq_version }}
-      /yq_{{ (ansible_system | default('Linux')) | lower }}_{{ _yq_arch }}
+      {{ 'https://github.com/mikefarah/yq/releases/download/' ~ yq_version
+      ~ '/yq_' ~ (ansible_system | default('Linux')) | lower ~ '_' ~ _yq_arch }}
     dest: /usr/local/bin/yq
     owner: root
     group: root

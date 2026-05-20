@@ -65,8 +65,8 @@ Vagrant.configure("2") do |config|
 
         lv.storage :file, device: :cdrom, path: $iso_path
         lv.storage :file, size: "8G", type: "raw"
-        lv.boot "hd"
         lv.boot "cdrom"
+        lv.boot "hd"
       end
     end
   end
@@ -87,8 +87,8 @@ Vagrant.configure("2") do |config|
 
         lv.storage :file, device: :cdrom, path: $iso_path
         lv.storage :file, size: "8G", type: "raw"
-        lv.boot "hd"
         lv.boot "cdrom"
+        lv.boot "hd"
       end
     end
   end

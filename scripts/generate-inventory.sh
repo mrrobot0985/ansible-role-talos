@@ -71,7 +71,9 @@ for dom in "${cp_vms[@]}"; do
   ip=$(wait_ip "$dom")
   cat >> "$INVENTORY" <<EOF
         $name:
+          ansible_connection: local
           ansible_host: $ip
+          talos_ip: $ip
           node_type: controlplane
 EOF
 done
@@ -86,7 +88,9 @@ for dom in "${worker_vms[@]}"; do
   ip=$(wait_ip "$dom")
   cat >> "$INVENTORY" <<EOF
         $name:
+          ansible_connection: local
           ansible_host: $ip
+          talos_ip: $ip
           node_type: worker
 EOF
 done

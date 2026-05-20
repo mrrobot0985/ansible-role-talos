@@ -2,11 +2,12 @@
 # Requires vagrant environment with pre-booted Talos Nodes
 - name: BrainXio Talos
   hosts: all
+  connection: local
   gather_facts: false
   roles:
     - name: mrrobot0985.talos
       role: ../../ansible-role-talos
       vars:
         talos_apply_dry_run: false
+        talos_enable_vip: false
         talos_force_generate: true
-        talos_vip_rule: "100"

@@ -12,6 +12,7 @@
       ) }}
   run_once: true
   delegate_to: localhost
+  when: talos_enable_vip | bool
   tags: [facts, networking]
 
 - name: Set global VIP fact
@@ -20,6 +21,7 @@
     talos_cluster_subnet: "{{ talos_network_global.cluster_subnet }}"
   run_once: true
   delegate_to: localhost
+  when: talos_enable_vip | bool
   tags: [facts, networking]
 
 - name: Inject VIP into talos_facts so patch module can see it
@@ -28,7 +30,9 @@
   vars:
     _vip_val: "{{ hostvars[groups.talos_controlplane[0]].talos_vip | default('') }}"
     _subnet_val: "{{ hostvars[groups.talos_controlplane[0]].talos_cluster_subnet | default('') }}"
-  when: _vip_val | length > 0
+  when:
+    - talos_enable_vip | bool
+    - _vip_val | length > 0
   tags: [facts, networking]
 
 - name: Set talos_ip

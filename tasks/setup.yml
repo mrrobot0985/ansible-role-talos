@@ -1,6 +1,12 @@
 ---
 # localhost setup – tools & dirs (final, actually minimal)
 
+- name: Set talos_ip with proper fallback
+  ansible.builtin.set_fact:
+    talos_ip: "{{ hostvars[inventory_hostname]['talos_ip'] | default(hostvars[inventory_hostname]['ansible_host']) }}"
+  delegate_to: localhost
+  tags: setup
+
 - name: Create .talos directories
   ansible.builtin.file:
     path: "{{ item }}"
@@ -70,3 +76,21 @@
   run_once: true
   delegate_to: localhost
   tags: [setup, talosctl, kubectl, yq, docs, mkdocs]
+
+- name: Verify node is in maintenance mode
+  ansible.builtin.command: talosctl get machinestatus -o json --insecure -n {{ talos_ip }}
+  changed_when: false
+  failed_when: false
+  register: maintenance_check
+  delegate_to: localhost
+  tags: setup
+
+- name: Fail if node is not in maintenance mode
+  ansible.builtin.fail:
+    msg: >-
+      Node {{ inventory_hostname }} ({{ talos_ip }}) is not in Talos
+      maintenance mode. Boot from the Talos ISO and ensure port 50000
+      is reachable.
+  when: maintenance_check.rc != 0
+  delegate_to: localhost
+  tags: setup

@@ -5,6 +5,7 @@
 # ──────────────────────────────────────────────────────────────
 talosctl_version: v1.11.5
 cluster_name: "talos-cluster"
+talos_enable_vip: true              # false → skip VIP calculation entirely
 talos_vip_rule: "-1"               # -1 = auto-calculate, else explicit VIP IP
 
 # ──────────────────────────────────────────────────────────────

@@ -150,6 +150,26 @@
   when: "'talos_workers' in groups"
   tags: bootstrap
 
+# -----------------------------------------------------------------
+# 9. Verify etcd quorum
+# -----------------------------------------------------------------
+- name: Verify etcd quorum
+  ansible.builtin.shell: |
+    set -eu
+    count=$(talosctl --talosconfig \
+      "{{ talos_config_dir }}/config/base/talosconfig" \
+      etcd members --nodes {{ hostvars[groups.talos_controlplane[0]].talos_ip }} 2>/dev/null | \
+      awk 'NR>1 && NF {count++} END {print count+0}')
+    if [ "$count" -lt "{{ groups.talos_controlplane | length }}" ]; then
+      echo "etcd quorum incomplete: $count/{{ groups.talos_controlplane | length }} members"
+      exit 1
+    fi
+    echo "etcd quorum OK: $count/{{ groups.talos_controlplane | length }} members"
+  delegate_to: localhost
+  run_once: true
+  changed_when: false
+  tags: bootstrap
+
 # ──────────────────────────────────────────────────────────────
 # Generate cluster report
 # ──────────────────────────────────────────────────────────────
