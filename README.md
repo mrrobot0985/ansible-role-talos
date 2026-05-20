@@ -230,7 +230,7 @@ The role executes in six strictly ordered phases via `import_tasks`:
   - `addresses` — IP addresses
   - `timeservers` — NTP configuration
   - `kernelparamstatus` — non-default kernel params
-- Processes raw facts through `talos_fact_processor` filter to produce:
+- Processes raw facts through `set_fact` tasks to produce:
   - `usable_disks` — filtered by size, readonly, transport
   - `install_disk` — smallest usable disk
   - `global_addresses` — non-local IPs
@@ -255,10 +255,6 @@ The role executes in six strictly ordered phases via `import_tasks`:
   - Extra kernel arguments
   - System extensions
   - Node labels / taints (single-node vs HA aware)
-- Sanitizes patch through `talos_sanitize` filter for v1alpha1 schema compliance:
-  - File permission octal strings → integers
-  - `extraKernelArgs` → `list[str]`
-  - `nodeLabels` → `map[string]string`
 - Applies patch to base config with `talosctl machineconfig patch`
 - Handles multi-document YAML (Talos v1.12+) by extracting the first document before patching
 
@@ -353,22 +349,13 @@ All modules live in `library/` and wrap `talosctl` or the Talos API.
 
 | Module | Purpose |
 |--------|---------|
-| `get_talos_facts.py` | Gathers raw node facts via `talosctl get` (disks, links, addresses, kernelparamstatus, version, timeservers, machinestatus, machineconfig.v1alpha1). Returns them as JSON strings in `ansible_facts`. |
 | `talos_patch_module.py` | Builds a pure RFC6902 JSON patch from gathered facts + inventory variables. Handles hostname, disk selection, DNS, NTP, VIP, kernel args, system extensions, node labels, and taints. |
 | `talos_network_module.py` | Calculates the cluster VIP from real node IPs. Aggregates all global IPv4 addresses, determines common subnet, applies `talos_vip_rule` (`-1`, `+1`, or fixed octet). Skips KubeSpan overlay addresses. |
 | `talos_gen_config.py` | Thin wrapper around `talosctl gen config`. Produces base controlplane/worker configs + talosconfig. |
 | `talos_gen_secrets.py` | Thin wrapper around `talosctl gen secrets`. Produces encrypted secrets bundle. |
 | `talos_wait.py` | Waits for Talos API TCP ports (up or down) or for kubectl nodes to report Ready. Supports `api` and `nodes` modes. |
 | `get_cluster_report.py` | Generates cluster-wide data: node list, system pods, component statuses, CNI detection, Talos version. |
-| `talos_get_resource.py` | Generic helper for fetching any Talos resource via `talosctl get`. Supports insecure and mTLS modes, multiple parse modes (`json_single`, `ndjson_dict`, etc.). |
 | `talos_node_type.py` | Determines node type (`controlplane`, `worker`, `standalone`) from inventory group membership. |
-
-### Filter Plugins (`filter_plugins/`)
-
-| Filter | Purpose |
-|--------|---------|
-| `process_talos_facts` | Transforms raw Talos API responses into flat, usable structures. Computes `usable_disks`, `global_addresses`, `all_interfaces`, `install_disk`, `primary_interface`, `changed_kernel_params`, etc. |
-| `talos_sanitize` | Sanitizes JSON patches for Talos v1alpha1 schema compliance. Fixes file permission octal strings to integers, ensures `extraKernelArgs` is `list[str]`, coerces `nodeLabels` to `map[string]string`. |
 
 ---
 

@@ -1,7 +1,7 @@
 ---
-# ──────────────────────────────────────────────────────────────
+# --------------------------------------------------------------
 # Step 2: Gather all resources using correct auth (mTLS when booted)
-# ──────────────────────────────────────────────────────────────
+# --------------------------------------------------------------
 - name: Get disks
   talos_get_resource:
     talos_ip: "{{ talos_ip }}"
@@ -26,7 +26,7 @@
   delegate_to: localhost
   tags: [facts, resources]
 
-- name: Get machine status (to detect maintenance mode)
+- name: Get machine status
   talos_get_resource:
     talos_ip: "{{ talos_ip }}"
     resource: machinestatus
@@ -92,9 +92,9 @@
   delegate_to: localhost
   tags: [facts, resources]
 
-# ──────────────────────────────────────────────────────────────
+# --------------------------------------------------------------
 # Assemble and process facts
-# ──────────────────────────────────────────────────────────────
+# --------------------------------------------------------------
 - name: Assemble talos_facts
   ansible.builtin.set_fact:
     talos_facts:
@@ -108,9 +108,162 @@
       kernelparamstatus: "{{ _kp.ansible_facts.talos_kernelparamstatus | default({}) }}"
   tags: [facts, resources]
 
-- name: Process talos_facts
+- name: Compute global_addresses
   ansible.builtin.set_fact:
-    talos_facts: "{{ talos_facts | process_talos_facts(inventory_hostname, hostvars[inventory_hostname]) }}"
+    _global_addresses: >-
+      {% set ns = namespace(addrs=[]) %}
+      {% for addr_id, addr in (talos_facts.addresses | default({})).items() %}
+      {%   if addr.spec.scope == 'global'
+            and not addr.spec.address.startswith(('127.', '::1', 'fe80::')) %}
+      {%     set ns.addrs = ns.addrs + [{
+               'address': addr.spec.address,
+               'family': addr.spec.family,
+               'link_name': addr.spec.linkName,
+               'scope': addr.spec.scope,
+             }] %}
+      {%   endif %}
+      {% endfor %}
+      {{ ns.addrs | to_json }}
+  tags: [facts, resources]
+
+- name: Compute usable_disks
+  ansible.builtin.set_fact:
+    _usable_disks: >-
+      {% set ns = namespace(disks=[]) %}
+      {% for disk_id, disk in (talos_facts.disks | default({})).items() %}
+      {%   if disk.spec.size | int >= 4294967296
+            and not disk.spec.cdrom | default(false)
+            and not disk.spec.readonly | default(false)
+            and disk.spec.transport != 'usb'
+            and not disk_id.startswith(('loop', 'sr')) %}
+      {%     set ns.disks = ns.disks + [{
+               'dev_path': disk.spec.dev_path,
+               'pretty_size': disk.spec.pretty_size,
+               'transport': disk.spec.transport,
+               'size': disk.spec.size,
+             }] %}
+      {%   endif %}
+      {% endfor %}
+      {{ ns.disks | to_json }}
+  tags: [facts, resources]
+
+- name: Compute install_disk
+  ansible.builtin.set_fact:
+    _install_disk: >-
+      {{
+        (_usable_disks | from_json | sort(attribute='size') | first | default({})).dev_path | default('')
+      }}
+  tags: [facts, resources]
+
+- name: Compute changed_kernel_params
+  ansible.builtin.set_fact:
+    _changed_kernel_params: >-
+      {% set ns = namespace(params={}) %}
+      {% for param_id, param in (talos_facts.kernelparamstatus | default({})).items() %}
+      {%   if param.spec.current != param.spec.default %}
+      {%     set ns.params = ns.params | combine({
+               param_id: {
+                 'current': param.spec.current,
+                 'default': param.spec.default,
+               }
+             }) %}
+      {%   endif %}
+      {% endfor %}
+      {{ ns.params | to_json }}
+  tags: [facts, resources]
+
+- name: Compute all_interfaces
+  ansible.builtin.set_fact:
+    _all_interfaces: >-
+      {% set ns = namespace(ifaces=[]) %}
+      {% for link_id, link in (talos_facts.links | default({})).items() %}
+      {%   if link.spec.type == 'ether'
+            and link.spec.linkState | default(false)
+            and link.spec.driver not in ['dummy', 'ip6tnl', 'sit', 'ipip']
+            and not link_id.startswith(('lo', 'dummy', 'sit0', 'ip6tnl0',
+                                        'teql0', 'tunl0', 'bond0')) %}
+      {%     set ns.ifaces = ns.ifaces + [{
+               'name': link_id,
+               'hardware_addr': link.spec.hardwareAddr,
+               'driver': link.spec.driver,
+               'link_state': link.spec.linkState,
+               'mtu': link.spec.mtu,
+               'operational_state': link.spec.operationalState,
+             }] %}
+      {%   endif %}
+      {% endfor %}
+      {{ ns.ifaces | to_json }}
+  tags: [facts, resources]
+
+- name: Compute primary_interface
+  ansible.builtin.set_fact:
+    _primary_interface: >-
+      {% set ns = namespace(iface='') %}
+      {% set host_ip = hostvars[inventory_hostname].ansible_host | default(hostvars[inventory_hostname].talos_ip, true) %}
+      {% set addrs = _global_addresses | default('[]') | from_json %}
+      {% if host_ip %}
+      {%   for addr in addrs %}
+      {%     if not ns.iface and addr.address.startswith(host_ip ~ '/') %}
+      {%       set ns.iface = addr.link_name %}
+      {%     endif %}
+      {%   endfor %}
+      {% endif %}
+      {% if not ns.iface %}
+      {%   for addr in addrs %}
+      {%     if not ns.iface and addr.family == 'inet4' %}
+      {%       set ns.iface = addr.link_name %}
+      {%     endif %}
+      {%   endfor %}
+      {% endif %}
+      {{ ns.iface }}
+  tags: [facts, resources]
+
+- name: Compute machinestatus_stage
+  ansible.builtin.set_fact:
+    _machinestatus_stage: "{{ (talos_facts.machinestatus | default({})).spec.stage | default('unknown') }}"
+  tags: [facts, resources]
+
+- name: Compute machinestatus_ready
+  ansible.builtin.set_fact:
+    _machinestatus_ready: >-
+      {{
+        ((talos_facts.machinestatus | default({})).spec.status | default({})).ready | default(false)
+      }}
+  tags: [facts, resources]
+
+- name: Compute timeservers_list
+  ansible.builtin.set_fact:
+    _timeservers_list: "{{ (talos_facts.timeservers | default({})).spec.timeServers | default([]) }}"
+  tags: [facts, resources]
+
+- name: Compute version
+  ansible.builtin.set_fact:
+    _version: "{{ (talos_facts.version | default({})).spec.version | default('unknown') }}"
+  tags: [facts, resources]
+
+- name: Compute machineconfig
+  ansible.builtin.set_fact:
+    _machineconfig: "{{ (talos_facts.machineconfig | default({})).spec | default({}) }}"
+  tags: [facts, resources]
+
+- name: Update talos_facts with processed fields
+  ansible.builtin.set_fact:
+    talos_facts: >-
+      {{
+        talos_facts | combine({
+          'global_addresses': _global_addresses | default('[]') | from_json,
+          'usable_disks': _usable_disks | default('[]') | from_json,
+          'install_disk': _install_disk | default(''),
+          'changed_kernel_params': _changed_kernel_params | default('{}') | from_json,
+          'all_interfaces': _all_interfaces | default('[]') | from_json,
+          'primary_interface': _primary_interface | default(''),
+          'machinestatus_stage': _machinestatus_stage | default('unknown'),
+          'machinestatus_ready': _machinestatus_ready | default(false),
+          'timeservers_list': _timeservers_list | default([]),
+          'version': _version | default('unknown'),
+          'machineconfig': _machineconfig | default({}),
+        })
+      }}
   tags: [facts, resources]
 
 - name: Aggregate global IPv4 from all nodes (maintenance only)
