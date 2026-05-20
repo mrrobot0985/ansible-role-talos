@@ -66,24 +66,6 @@ argument_specs:
       # ──────────────────────────────────────────────────────────────
       # Node customization
       # ──────────────────────────────────────────────────────────────
-      talos_extensions:
-        type: list
-        elements: str
-        default: []
-        required: false
-        description:
-          - List of Talos system extensions to install.
-          - Examples include intel-ucode and qemu-guest-agent.
-
-      talos_kernel_args:
-        type: list
-        elements: str
-        default: []
-        required: false
-        description:
-          - Extra kernel arguments to append during machine config generation.
-          - Examples include console=ttyS0 and talos.platform=metal.
-
       cluster_ntp_servers:
         type: list
         elements: str
@@ -111,22 +93,6 @@ argument_specs:
         required: false
         description: Per-node customization dictionary for extra kernel args and system extensions.
 
-      control_plane_workloads:
-        type: bool
-        default: false
-        required: false
-        description:
-          - When true, removes the NoSchedule taint from control plane nodes
-            so user workloads can be scheduled on them.
-
-      enable_essentials:
-        type: bool
-        default: false
-        required: false
-        description:
-          - When true, installs essential cluster addons such as metrics-server
-            and local-path provisioner during bootstrap.
-
       # ──────────────────────────────────────────────────────────────
       # Runtime behavior
       # ──────────────────────────────────────────────────────────────
@@ -145,18 +111,6 @@ argument_specs:
         description:
           - When true, the role generates and writes configs to disk
             but does not apply them to nodes. Set to false for actual deployment.
-
-      bootstrap_timeout:
-        type: int
-        default: 1200
-        required: false
-        description: Maximum seconds to wait for all nodes to become Ready during bootstrap.
-
-      report_timeout:
-        type: int
-        default: 300
-        required: false
-        description: Maximum seconds to wait for pods and API resources during report generation.
 
       talos_config_dir:
         type: str
@@ -179,12 +133,6 @@ argument_specs:
         required: false
         description: When false, skips MkDocs and data output generation.
 
-      talos_docs_format:
-        type: str
-        default: "mkdocs"
-        required: false
-        description: Documentation output format. Currently only mkdocs is supported.
-
       encrypt_talos_dir:
         type: bool
         default: false
@@ -205,30 +153,3 @@ argument_specs:
         default: "v4.48.2"
         required: false
         description: Version of the yq binary to install on the Ansible control node.
-
-      # ──────────────────────────────────────────────────────────────
-      # Derived internal paths (vars/main.yml)
-      # ──────────────────────────────────────────────────────────────
-      talosconfig_path:
-        type: str
-        default: "{{ talos_config_dir }}/talosconfig"
-        required: false
-        description: Path to the generated talosconfig file. Derived from talos_config_dir.
-
-      talos_secrets_path:
-        type: str
-        default: "{{ talos_config_dir }}/config/secrets/secrets.yaml"
-        required: false
-        description: Path to the generated cluster secrets bundle. Derived from talos_config_dir.
-
-      talos_base_cp_path:
-        type: str
-        default: "{{ talos_config_dir }}/config/base/controlplane.yaml"
-        required: false
-        description: Path to the base control plane machine config. Derived from talos_config_dir.
-
-      talos_base_worker_path:
-        type: str
-        default: "{{ talos_config_dir }}/config/base/worker.yaml"
-        required: false
-        description: Path to the base worker machine config. Derived from talos_config_dir.

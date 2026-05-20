@@ -17,8 +17,6 @@ cp_endpoint: "https://{{ hostvars[groups.talos_controlplane[0]].ansible_host }}:
 # Optional per-node customizations (declarative, no code changes)
 # ──────────────────────────────────────────────────────────────
 customization: {}                      # per-node customization dict (see docs)
-talos_extensions: []                  # e.g. ["intel-ucode", "qemu-guest-agent"]
-talos_kernel_args: []                 # e.g. ["console=ttyS0", "talos.platform=metal"]
 cluster_ntp_servers: []               # e.g. ["time.google.com", "ntp.ubuntu.com"]
 talos_cluster_dns: []                   # alias for cluster_dns_servers
 talos_cluster_ntp: []                   # alias for cluster_ntp_servers
@@ -28,12 +26,8 @@ talos_cluster_ntp: []                   # alias for cluster_ntp_servers
 # ──────────────────────────────────────────────────────────────
 talos_force_generate: false
 talos_apply_dry_run: true
-control_plane_workloads: false        # true → remove NoSchedule taint from CPs
 cluster_dns_domain: "cluster.local"   # Override DNS search domain
 cluster_dns_servers: []               # List of upstream DNS
-enable_essentials: false              # true → install metrics-server + local-path
-bootstrap_timeout: 1200               # Wait for nodes (seconds)
-report_timeout: 300                   # Wait for pods/API (seconds)
 
 # ──────────────────────────────────────────────────────────────
 # Vault encryption (optional)
