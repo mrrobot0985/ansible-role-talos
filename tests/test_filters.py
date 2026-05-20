@@ -97,6 +97,46 @@ class TestTalosVip:
         )
         assert result["has_cni"] is True
 
+    def test_ipv6_preserved(self, f):
+        result = f(
+            [
+                "192.168.1.10/24",
+                "192.168.1.11/24",
+                "2001:db8::10/64",
+                "2001:db8::11/64",
+            ],
+            vip_rule="-1",
+            total_nodes=2,
+            control_plane_count=2,
+        )
+        assert result["vip"] == "192.168.1.9/24"
+        assert "2001:db8::10" in result["real_node_ips_v6"]
+        assert "2001:db8::11" in result["real_node_ips_v6"]
+        assert result["cluster_subnet_v6"] == "2001:db8::/64"
+
+    def test_ipv6_overlay_filtered(self, f):
+        result = f(
+            [
+                "192.168.1.10/24",
+                "2001:db8::10/64",
+                "fe80::1/64",
+                "fd00::1/64",
+            ],
+            vip_rule="-1",
+            total_nodes=1,
+            control_plane_count=2,
+        )
+        assert "fe80::1" not in result["real_node_ips_v6"]
+        assert "fd00::1" not in result["real_node_ips_v6"]
+        assert "2001:db8::10" in result["real_node_ips_v6"]
+
+    def test_ipv6_only_raises(self, f):
+        with pytest.raises(ValueError, match="No infrastructure IPv4"):
+            f(
+                ["2001:db8::10/64", "2001:db8::11/64"],
+                control_plane_count=2,
+            )
+
 
 class TestTalosPatch:
     @pytest.fixture

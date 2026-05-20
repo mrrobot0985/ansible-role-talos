@@ -29,8 +29,8 @@ automation, not a workaround.
 ## Limitations
 
 - **Smart disk selection** is heuristic-based (smallest non-removable, writable disk ≥4 GB). It may fail on exotic hardware (RAID, multipath, or very small NVMe partitions). Review `.talos/reports/` when in doubt.
-- **No Molecule tests yet** — integration coverage relies on Vagrant VMs or real Talos nodes. CI validates filter unit tests and dry-run config generation only.
-- **IPv6-only networks are not supported** — VIP calculation and endpoint discovery require at least one routable IPv4 address per node.
+- **IPv6 VIP is not supported** — The VIP itself (used by keepalived/kube-vip) remains IPv4-only. IPv6 dual-stack addresses are detected, filtered, and reported in `talos_network_global.cluster_subnet_v6`, but the VIP is always IPv4.
+- **IPv6-only networks are not supported** — At least one routable IPv4 address per node is required for VIP calculation and endpoint discovery.
 
 ## Requirements
 
