@@ -1,24 +1,26 @@
 ---
-# --------------------------------------------------------------
-# Step 1: Detect maintenance mode using machinestatus (insecure)
-# --------------------------------------------------------------
-- name: Get machine status (to detect maintenance mode)
-  talos_get_resource:
-    talos_ip: "{{ talos_ip }}"
-    resource: machinestatus
-    parse_mode: json_single
-    insecure: true
-  register: _ms
+# Detect maintenance mode using machinestatus
+- name: Get machine status
+  ansible.builtin.command: >-
+    talosctl get machinestatus
+    -o json
+    --insecure
+    -n {{ talos_ip }}
   delegate_to: localhost
   ignore_errors: true
+  changed_when: false
+  tags: [facts, machinestatus]
+  register: _ms_raw
+
+- name: Parse machine status
+  ansible.builtin.set_fact:
+    talos_machinestatus: "{{ _ms_raw.stdout | talos_parse_resource(parse_mode='json_single') }}"
   tags: [facts, machinestatus]
 
-- name: Set is_maintenance fact (safe access)
+- name: Set is_maintenance fact
   ansible.builtin.set_fact:
     is_maintenance: >-
-      {{
-        (_ms.ansible_facts | default({})).get('talos_machinestatus', {}).get('spec', {}).get('stage', '') == 'maintenance'
-      }}
+      {{ (talos_machinestatus | default({})).get('spec', {}).get('stage', '') == 'maintenance' }}
   tags: [facts, machinestatus]
 
 - name: Compute node_type

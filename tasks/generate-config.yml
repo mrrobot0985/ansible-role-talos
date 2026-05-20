@@ -13,10 +13,22 @@
   tags: config
 
 - name: Generate Talos secrets
-  talos_gen_secrets:
-    output_file: "{{ talos_config_dir }}/config/secrets/secrets.yaml"
-    force: "{{ talos_force_generate | default(false) | bool }}"
-  when: talos_force_generate | default(false) | bool or not secrets_stat.stat.exists
+  ansible.builtin.command: >-
+    talosctl gen secrets
+    -o {{ talos_config_dir }}/config/secrets/secrets.yaml
+  args:
+    creates: "{{ talos_config_dir }}/config/secrets/secrets.yaml"
+  when: not secrets_stat.stat.exists
+  run_once: true
+  delegate_to: localhost
+  tags: config
+
+- name: Force regenerate Talos secrets
+  ansible.builtin.command: >-
+    talosctl gen secrets
+    -o {{ talos_config_dir }}/config/secrets/secrets.yaml
+    --force
+  when: talos_force_generate | default(false) | bool
   run_once: true
   delegate_to: localhost
   tags: config
@@ -30,13 +42,24 @@
   tags: config
 
 - name: Generate base Talos config
-  talos_gen_config:
-    cluster_name: "{{ cluster_name }}"
-    endpoint: "{{ cp_endpoint }}"
-    output_dir: "{{ talos_config_dir }}/config/base"
-    secrets_file: "{{ talos_config_dir }}/config/secrets/secrets.yaml"
-    force: "{{ talos_force_generate | default(false) | bool }}"
-  when: talos_force_generate | default(false) | bool or not base_stat.stat.exists
+  ansible.builtin.command: >-
+    talosctl gen config {{ cluster_name }} {{ cp_endpoint }}
+    -o {{ talos_config_dir }}/config/base
+    --with-secrets {{ talos_config_dir }}/config/secrets/secrets.yaml
+  args:
+    creates: "{{ talos_config_dir }}/config/base/controlplane.yaml"
+  when: not base_stat.stat.exists
+  run_once: true
+  delegate_to: localhost
+  tags: config
+
+- name: Force regenerate base Talos config
+  ansible.builtin.command: >-
+    talosctl gen config {{ cluster_name }} {{ cp_endpoint }}
+    -o {{ talos_config_dir }}/config/base
+    --with-secrets {{ talos_config_dir }}/config/secrets/secrets.yaml
+    --force
+  when: talos_force_generate | default(false) | bool
   run_once: true
   delegate_to: localhost
   tags: config

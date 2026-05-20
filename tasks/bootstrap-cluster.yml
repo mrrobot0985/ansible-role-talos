@@ -75,10 +75,10 @@
 # 6. Wait for K8s API (VIP if present, otherwise bootstrap node)
 # -----------------------------------------------------------------
 - name: Wait for K8s API on VIP
-  talos_wait:
-    mode: api
+  ansible.builtin.wait_for:
     host: "{{ talos_vip | split('/') | first }}"
     port: 6443
+    state: started
     timeout: 300
     delay: 10
   delegate_to: localhost
@@ -87,10 +87,10 @@
   tags: bootstrap
 
 - name: Wait for K8s API on bootstrap node (single-node fallback)
-  talos_wait:
-    mode: api
+  ansible.builtin.wait_for:
     host: "{{ hostvars[groups.talos_controlplane[0]].talos_ip }}"
     port: 6443
+    state: started
     timeout: 300
     delay: 10
   delegate_to: localhost
@@ -102,13 +102,21 @@
 # 7. Wait for control-plane nodes Ready
 # -----------------------------------------------------------------
 - name: Wait for control-plane nodes Ready
-  talos_wait:
-    mode: nodes
-    kubeconfig: "{{ playbook_dir }}/.talos/kubeconfig"
-    label: node-role.kubernetes.io/control-plane
-    count: "{{ groups.talos_controlplane | length }}"
-    timeout: 1200
-    delay: 10
+  ansible.builtin.shell: |
+    set -eu
+    for i in $(seq 1 120); do
+      ready=$(kubectl --kubeconfig "{{ playbook_dir }}/.talos/kubeconfig" \
+        get nodes -l node-role.kubernetes.io/control-plane \
+        -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
+      count=$(echo "$ready" | grep -o "True" | wc -l)
+      if [ "$count" -ge {{ groups.talos_controlplane | length }} ]; then
+        echo "$count/{{ groups.talos_controlplane | length }} nodes ready"
+        exit 0
+      fi
+      sleep 10
+    done
+    echo "Timeout waiting for control-plane nodes"
+    exit 1
   delegate_to: localhost
   run_once: true
   tags: bootstrap
@@ -117,13 +125,21 @@
 # 8. Wait for worker nodes Ready
 # -----------------------------------------------------------------
 - name: Wait for worker nodes Ready
-  talos_wait:
-    mode: nodes
-    kubeconfig: "{{ playbook_dir }}/.talos/kubeconfig"
-    label: '!node-role.kubernetes.io/control-plane'
-    count: "{{ (groups.talos_workers | default([])) | length }}"
-    timeout: 600
-    delay: 10
+  ansible.builtin.shell: |
+    set -eu
+    for i in $(seq 1 60); do
+      ready=$(kubectl --kubeconfig "{{ playbook_dir }}/.talos/kubeconfig" \
+        get nodes -l '!node-role.kubernetes.io/control-plane' \
+        -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
+      count=$(echo "$ready" | grep -o "True" | wc -l)
+      if [ "$count" -ge {{ (groups.talos_workers | default([])) | length }} ]; then
+        echo "$count/{{ (groups.talos_workers | default([])) | length }} nodes ready"
+        exit 0
+      fi
+      sleep 10
+    done
+    echo "Timeout waiting for worker nodes"
+    exit 1
   delegate_to: localhost
   run_once: true
   when: "'talos_workers' in groups"
@@ -132,12 +148,126 @@
 # ──────────────────────────────────────────────────────────────
 # Generate cluster report
 # ──────────────────────────────────────────────────────────────
-- name: Generate cluster-wide data
-  get_cluster_report:
-    kubeconfig: "{{ playbook_dir }}/.talos/kubeconfig"
-    talosconfig: "{{ talos_config_dir }}/config/base/talosconfig"
-    first_cp_ip: "{{ hostvars[groups.talos_controlplane[0]].talos_ip }}"
-  register: _cluster_report
+- name: Check if Kubernetes API is reachable
+  ansible.builtin.command: >-
+    kubectl --kubeconfig {{ playbook_dir }}/.talos/kubeconfig
+    cluster-info
+  delegate_to: localhost
+  run_once: true
+  changed_when: false
+  ignore_errors: true
+  tags: cluster_report
+  register: _kube_api_check
+
+- name: Gather cluster node info
+  ansible.builtin.command: >-
+    kubectl --kubeconfig {{ playbook_dir }}/.talos/kubeconfig
+    get nodes -o json
+  delegate_to: localhost
+  run_once: true
+  changed_when: false
+  ignore_errors: true
+  tags: cluster_report
+  register: _kube_nodes_raw
+
+- name: Gather system pods
+  ansible.builtin.command: >-
+    kubectl --kubeconfig {{ playbook_dir }}/.talos/kubeconfig
+    get pods -n kube-system -o json
+  delegate_to: localhost
+  run_once: true
+  changed_when: false
+  ignore_errors: true
+  tags: cluster_report
+  register: _kube_pods_raw
+
+- name: Extract pod names for CNI detection
+  ansible.builtin.set_fact:
+    _pod_names: >-
+      {{-
+        (_kube_pods_raw.stdout | from_json | default({})).items | default([])
+        | map(attribute='metadata.name') | join(' ')
+      }}
+  delegate_to: localhost
+  run_once: true
+  tags: cluster_report
+
+- name: Detect CNI from running pods
+  ansible.builtin.set_fact:
+    _cni_detected: >-
+      {{
+        'cilium'
+        if 'cilium' in (_pod_names | default(''))
+        else 'flannel'
+        if 'flannel' in (_pod_names | default(''))
+        else 'unknown'
+      }}
+  delegate_to: localhost
+  run_once: true
+  tags: cluster_report
+
+- name: Extract node list from kubectl output
+  ansible.builtin.set_fact:
+    _report_nodes: >-
+      {%- set ns = namespace(nodes=[]) %}
+      {%- for item in ((_kube_nodes_raw.stdout | from_json | default({})).items | default([])) %}
+      {%-   set role = 'control-plane'
+            if 'node-role.kubernetes.io/control-plane' in (item.metadata.labels | default({}))
+            else 'worker' %}
+      {%-   set internal_ip = '' %}
+      {%-   for addr in (item.status.addresses | default([])) %}
+      {%-     if addr.type == 'InternalIP' %}
+      {%-       set internal_ip = addr.address %}
+      {%-     endif %}
+      {%-   endfor %}
+      {%-   set ready_status = 'Unknown' %}
+      {%-   for cond in (item.status.conditions | default([])) %}
+      {%-     if cond.type == 'Ready' %}
+      {%-       set ready_status = cond.status %}
+      {%-     endif %}
+      {%-   endfor %}
+      {%-   set ns.nodes = ns.nodes + [{
+              'name': item.metadata.name,
+              'roles': role,
+              'internal_ip': internal_ip,
+              'status': ready_status,
+              'version': item.status.nodeInfo.kubeletVersion | default('unknown'),
+            }] %}
+      {%- endfor %}
+      {{ ns.nodes }}
+  delegate_to: localhost
+  run_once: true
+  tags: cluster_report
+
+- name: Extract system pod list from kubectl output
+  ansible.builtin.set_fact:
+    _report_pods: >-
+      {%- set ns = namespace(pods=[]) %}
+      {%- for item in ((_kube_pods_raw.stdout | from_json | default({})).items | default([])) %}
+      {%-   set ready = item.status.containerStatuses | default([]) | map(attribute='ready') | list | count %}
+      {%-   set total = item.status.containerStatuses | default([]) | length %}
+      {%-   set restarts = item.status.containerStatuses | default([]) | map(attribute='restartCount') | list | sum %}
+      {%-   set ns.pods = ns.pods + [{
+              'name': item.metadata.name,
+              'ready': ready ~ '/' ~ total,
+              'restarts': restarts,
+              'node': item.spec.nodeName | default(''),
+            }] %}
+      {%- endfor %}
+      {{ ns.pods }}
+  delegate_to: localhost
+  run_once: true
+  tags: cluster_report
+
+- name: Build cluster report
+  ansible.builtin.set_fact:
+    _cluster_report:
+      kube_api_reachable: "{{ _kube_api_check.rc == 0 }}"
+      talos_version: "{{ talos_facts.version | default('unknown') }}"
+      nodes: "{{ _report_nodes | default([]) }}"
+      system_pods: "{{ _report_pods | default([]) }}"
+      component_statuses: []
+      cni: "{{ _cni_detected | default('unknown') }}"
   delegate_to: localhost
   run_once: true
   tags: cluster_report

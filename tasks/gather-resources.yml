@@ -1,111 +1,149 @@
 ---
-# --------------------------------------------------------------
-# Step 2: Gather all resources using correct auth (mTLS when booted)
-# --------------------------------------------------------------
+# Gather all resources using correct auth (mTLS when booted)
+
 - name: Get disks
-  talos_get_resource:
-    talos_ip: "{{ talos_ip }}"
-    resource: disks
-    parse_mode: ndjson_dict
-    insecure: "{{ is_maintenance }}"
-    talosconfig: "{{ talos_config_dir }}/config/base/talosconfig"
-  register: _disks
+  ansible.builtin.command: >-
+    talosctl get disks
+    -o json
+    {{ '--insecure' if is_maintenance else '--talosconfig ' ~ talos_config_dir ~ '/config/base/talosconfig' }}
+    -n {{ talos_ip }}
   delegate_to: localhost
+  changed_when: false
+  tags: [facts, resources]
+  register: _disks_raw
+
+- name: Parse disks
+  ansible.builtin.set_fact:
+    talos_disks: "{{ _disks_raw.stdout | talos_parse_resource(parse_mode='ndjson_dict') }}"
   tags: [facts, resources]
 
 - name: Get machineconfig
-  talos_get_resource:
-    talos_ip: "{{ talos_ip }}"
-    resource: machineconfig.v1alpha1
-    namespace: config
-    parse_mode: json_single
-    insecure: "{{ is_maintenance }}"
-    talosconfig: "{{ talos_config_dir }}/config/base/talosconfig"
-  register: _mc
-  ignore_errors: true
+  ansible.builtin.command: >-
+    talosctl get machineconfig.v1alpha1
+    --namespace config
+    -o json
+    {{ '--insecure' if is_maintenance else '--talosconfig ' ~ talos_config_dir ~ '/config/base/talosconfig' }}
+    -n {{ talos_ip }}
   delegate_to: localhost
+  ignore_errors: true
+  changed_when: false
+  tags: [facts, resources]
+  register: _mc_raw
+
+- name: Parse machineconfig
+  ansible.builtin.set_fact:
+    talos_machineconfig_v1alpha1: "{{ _mc_raw.stdout | talos_parse_resource(parse_mode='json_single') }}"
   tags: [facts, resources]
 
 - name: Get machine status
-  talos_get_resource:
-    talos_ip: "{{ talos_ip }}"
-    resource: machinestatus
-    parse_mode: json_single
-    insecure: true
-  register: _ms
+  ansible.builtin.command: >-
+    talosctl get machinestatus
+    -o json
+    --insecure
+    -n {{ talos_ip }}
   delegate_to: localhost
   ignore_errors: true
+  changed_when: false
+  tags: [facts, resources]
+  register: _ms_raw
+
+- name: Parse machine status
+  ansible.builtin.set_fact:
+    talos_machinestatus: "{{ _ms_raw.stdout | talos_parse_resource(parse_mode='json_single') }}"
   tags: [facts, resources]
 
 - name: Get version
-  talos_get_resource:
-    talos_ip: "{{ talos_ip }}"
-    resource: version
-    parse_mode: json_single
-    insecure: "{{ is_maintenance }}"
-    talosconfig: "{{ talos_config_dir }}/config/base/talosconfig"
-  register: _ver
+  ansible.builtin.command: >-
+    talosctl get version
+    -o json
+    {{ '--insecure' if is_maintenance else '--talosconfig ' ~ talos_config_dir ~ '/config/base/talosconfig' }}
+    -n {{ talos_ip }}
   delegate_to: localhost
+  changed_when: false
+  tags: [facts, resources]
+  register: _ver_raw
+
+- name: Parse version
+  ansible.builtin.set_fact:
+    talos_version: "{{ _ver_raw.stdout | talos_parse_resource(parse_mode='json_single') }}"
   tags: [facts, resources]
 
 - name: Get network links
-  talos_get_resource:
-    talos_ip: "{{ talos_ip }}"
-    resource: links
-    parse_mode: ndjson_dict
-    insecure: "{{ is_maintenance }}"
-    talosconfig: "{{ talos_config_dir }}/config/base/talosconfig"
-  register: _links
+  ansible.builtin.command: >-
+    talosctl get links
+    -o json
+    {{ '--insecure' if is_maintenance else '--talosconfig ' ~ talos_config_dir ~ '/config/base/talosconfig' }}
+    -n {{ talos_ip }}
   delegate_to: localhost
+  changed_when: false
+  tags: [facts, resources]
+  register: _links_raw
+
+- name: Parse network links
+  ansible.builtin.set_fact:
+    talos_links: "{{ _links_raw.stdout | talos_parse_resource(parse_mode='ndjson_dict') }}"
   tags: [facts, resources]
 
 - name: Get IP addresses
-  talos_get_resource:
-    talos_ip: "{{ talos_ip }}"
-    resource: addresses
-    parse_mode: ndjson_dict
-    insecure: "{{ is_maintenance }}"
-    talosconfig: "{{ talos_config_dir }}/config/base/talosconfig"
-  register: _addrs
+  ansible.builtin.command: >-
+    talosctl get addresses
+    -o json
+    {{ '--insecure' if is_maintenance else '--talosconfig ' ~ talos_config_dir ~ '/config/base/talosconfig' }}
+    -n {{ talos_ip }}
   delegate_to: localhost
+  changed_when: false
+  tags: [facts, resources]
+  register: _addrs_raw
+
+- name: Parse IP addresses
+  ansible.builtin.set_fact:
+    talos_addresses: "{{ _addrs_raw.stdout | talos_parse_resource(parse_mode='ndjson_dict') }}"
   tags: [facts, resources]
 
 - name: Get time servers
-  talos_get_resource:
-    talos_ip: "{{ talos_ip }}"
-    resource: timeservers
-    parse_mode: json_single
-    insecure: "{{ is_maintenance }}"
-    talosconfig: "{{ talos_config_dir }}/config/base/talosconfig"
-  register: _ts
+  ansible.builtin.command: >-
+    talosctl get timeservers
+    -o json
+    {{ '--insecure' if is_maintenance else '--talosconfig ' ~ talos_config_dir ~ '/config/base/talosconfig' }}
+    -n {{ talos_ip }}
   delegate_to: localhost
+  changed_when: false
+  tags: [facts, resources]
+  register: _ts_raw
+
+- name: Parse time servers
+  ansible.builtin.set_fact:
+    talos_timeservers: "{{ _ts_raw.stdout | talos_parse_resource(parse_mode='json_single') }}"
   tags: [facts, resources]
 
 - name: Get kernel param status
-  talos_get_resource:
-    talos_ip: "{{ talos_ip }}"
-    resource: kernelparamstatus
-    parse_mode: ndjson_dict
-    insecure: "{{ is_maintenance }}"
-    talosconfig: "{{ talos_config_dir }}/config/base/talosconfig"
-  register: _kp
+  ansible.builtin.command: >-
+    talosctl get kernelparamstatus
+    -o json
+    {{ '--insecure' if is_maintenance else '--talosconfig ' ~ talos_config_dir ~ '/config/base/talosconfig' }}
+    -n {{ talos_ip }}
   delegate_to: localhost
+  changed_when: false
+  tags: [facts, resources]
+  register: _kp_raw
+
+- name: Parse kernel param status
+  ansible.builtin.set_fact:
+    talos_kernelparamstatus: "{{ _kp_raw.stdout | talos_parse_resource(parse_mode='ndjson_dict') }}"
   tags: [facts, resources]
 
-# --------------------------------------------------------------
 # Assemble and process facts
-# --------------------------------------------------------------
 - name: Assemble talos_facts
   ansible.builtin.set_fact:
     talos_facts:
-      disks: "{{ _disks.ansible_facts.talos_disks | default({}) }}"
-      machineconfig: "{{ _mc.ansible_facts.talos_machineconfig_v1alpha1 | default({}) }}"
-      version: "{{ _ver.ansible_facts.talos_version | default({}) }}"
-      links: "{{ _links.ansible_facts.talos_links | default({}) }}"
-      addresses: "{{ _addrs.ansible_facts.talos_addresses | default({}) }}"
-      timeservers: "{{ _ts.ansible_facts.talos_timeservers | default({}) }}"
-      machinestatus: "{{ _ms.ansible_facts.talos_machinestatus | default({}) }}"
-      kernelparamstatus: "{{ _kp.ansible_facts.talos_kernelparamstatus | default({}) }}"
+      disks: "{{ talos_disks | default({}) }}"
+      machineconfig: "{{ talos_machineconfig_v1alpha1 | default({}) }}"
+      version: "{{ talos_version | default({}) }}"
+      links: "{{ talos_links | default({}) }}"
+      addresses: "{{ talos_addresses | default({}) }}"
+      timeservers: "{{ talos_timeservers | default({}) }}"
+      machinestatus: "{{ talos_machinestatus | default({}) }}"
+      kernelparamstatus: "{{ talos_kernelparamstatus | default({}) }}"
   tags: [facts, resources]
 
 - name: Compute global_addresses

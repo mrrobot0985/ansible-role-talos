@@ -1,14 +1,40 @@
 ---
+- name: Download talosctl checksums
+  ansible.builtin.get_url:
+    url: >-
+      https://github.com/siderolabs/talos/releases/download/{{ talosctl_version }}/sha256sum.txt
+    dest: /tmp/talosctl-sha256sum.txt
+    mode: '0644'
+  tags: [setup, talosctl]
+
+- name: Extract talosctl checksum
+  ansible.builtin.set_fact:
+    _talosctl_checksum: >-
+      {{
+        lookup('file', '/tmp/talosctl-sha256sum.txt')
+        | regex_search('^([a-f0-9]{64})\s+.*talosctl-linux-' ~ _talosctl_arch ~ '$', '\1')
+        | first
+        | default('')
+      }}
+  vars:
+    _talosctl_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+  tags: [setup, talosctl]
+
+- name: Fail if talosctl checksum not found
+  ansible.builtin.fail:
+    msg: "Could not find SHA256 checksum for talosctl-linux-{{ _talosctl_arch }}"
+  when: _talosctl_checksum | length == 0
+  tags: [setup, talosctl]
+
 - name: Install talosctl
   ansible.builtin.get_url:
     url: >-
-      https://github.com/siderolabs/talos/releases/download/{{ talosctl_version }}/talosctl-linux-{{
-        'arm64' if ansible_architecture == 'aarch64' else 'amd64'
-      }}
+      https://github.com/siderolabs/talos/releases/download/{{ talosctl_version }}/talosctl-linux-{{ _talosctl_arch }}
     dest: /usr/local/bin/talosctl
     owner: root
     group: root
     mode: '0755'
+    checksum: "sha256:{{ _talosctl_checksum }}"
   become: true
   tags: [setup, talosctl]
 

@@ -1,14 +1,42 @@
 ---
-- name: Install yq (pinned version from defaults/main.yml)
+- name: Download yq checksums
   ansible.builtin.get_url:
     url: >-
-      https://github.com/mikefarah/yq/releases/download/{{ yq_version }}/yq_{{ ansible_system | lower }}_{{
-        'amd64' if ansible_architecture == 'x86_64' else 'arm64'
+      https://github.com/mikefarah/yq/releases/download/{{ yq_version }}/checksums
+    dest: /tmp/yq-checksums.txt
+    mode: '0644'
+  tags: [setup, yq]
+
+- name: Extract yq checksum
+  ansible.builtin.set_fact:
+    _yq_checksum: >-
+      {{
+        lookup('file', '/tmp/yq-checksums.txt')
+        | regex_search('^([a-f0-9]{64})\s+.*yq_' ~ ansible_system | lower ~ '_' ~ _yq_arch ~ '$', '\1')
+        | first
+        | default('')
       }}
+  vars:
+    _yq_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}"
+  tags: [setup, yq]
+
+- name: Fail if yq checksum not found
+  ansible.builtin.fail:
+    msg: "Could not find SHA256 checksum for yq"
+  when: _yq_checksum | length == 0
+  tags: [setup, yq]
+
+- name: Install yq
+  ansible.builtin.get_url:
+    url: >-
+      https://github.com/mikefarah/yq/releases/download/{{ yq_version }}/yq_{{ ansible_system | lower }}_{{ _yq_arch }}
     dest: /usr/local/bin/yq
     owner: root
     group: root
     mode: '0755'
+    checksum: "sha256:{{ _yq_checksum }}"
+  vars:
+    _yq_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}"
   become: true
   tags: [setup, yq]
 
