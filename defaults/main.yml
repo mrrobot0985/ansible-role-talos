@@ -10,14 +10,17 @@ talos_vip_rule: "-1"               # -1 = auto-calculate, else explicit VIP IP
 # ──────────────────────────────────────────────────────────────
 # Kubernetes API endpoint (used by talosctl gen config)
 # ──────────────────────────────────────────────────────────────
-cp_endpoint: "https://{{ hostvars[groups.talos_controlplane[0]].talos_ip }}:6443"
+cp_endpoint: "https://{{ hostvars[groups.talos_controlplane[0]].ansible_host }}:6443"
 
 # ──────────────────────────────────────────────────────────────
 # Optional per-node customizations (declarative, no code changes)
 # ──────────────────────────────────────────────────────────────
+customization: {}                      # per-node customization dict (see docs)
 talos_extensions: []                  # e.g. ["intel-ucode", "qemu-guest-agent"]
 talos_kernel_args: []                 # e.g. ["console=ttyS0", "talos.platform=metal"]
 cluster_ntp_servers: []               # e.g. ["time.google.com", "ntp.ubuntu.com"]
+talos_cluster_dns: []                   # alias for cluster_dns_servers
+talos_cluster_ntp: []                   # alias for cluster_ntp_servers
 
 # ──────────────────────────────────────────────────────────────
 # Runtime behavior
@@ -30,6 +33,12 @@ cluster_dns_servers: []               # List of upstream DNS
 enable_essentials: false              # true → install metrics-server + local-path
 bootstrap_timeout: 1200               # Wait for nodes (seconds)
 report_timeout: 300                   # Wait for pods/API (seconds)
+
+# ──────────────────────────────────────────────────────────────
+# Vault encryption (optional)
+# ──────────────────────────────────────────────────────────────
+encrypt_talos_dir: false               # true → encrypt .talos/ with ansible-vault
+vault_pass_file: ".vault_pass"         # path to vault password file
 
 # ──────────────────────────────────────────────────────────────
 # Working directories (override in inventory or extra vars)

@@ -50,6 +50,12 @@
   delegate_to: localhost
   tags: setup
 
+- name: Gather localhost facts
+  ansible.builtin.setup:
+  delegate_to: localhost
+  run_once: true
+  tags: [setup]
+
 - name: Ensure /usr/local/bin is in PATH
   ansible.builtin.lineinfile:
     path: /etc/environment
@@ -57,8 +63,10 @@
     line: 'PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"'
     backup: yes
   become: true
+  delegate_to: localhost
   tags: [setup]
 
 - import_tasks: install-tools.yml
   run_once: true
+  delegate_to: localhost
   tags: [setup, talosctl, kubectl, yq, docs, mkdocs]

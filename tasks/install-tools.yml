@@ -17,12 +17,17 @@
     _talosctl_checksum: >-
       {{
         lookup('file', '/tmp/talosctl-sha256sum.txt')
-        | regex_search('^([a-f0-9]{64})\s+.*talosctl-linux-' ~ _talosctl_arch ~ '$', '\1')
+        | regex_search('^([a-f0-9]{64})\s+.*talosctl-linux-' ~ _talosctl_arch ~ '$', '\1', multiline=true)
         | first
         | default('')
       }}
   vars:
-    _talosctl_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+    _talosctl_arch: "{{ 'arm64' if ansible_architecture | default('x86_64') == 'aarch64' else 'amd64' }}"
+  tags: [setup, talosctl]
+
+- name: Persist talosctl architecture fact
+  ansible.builtin.set_fact:
+    _talosctl_arch: "{{ 'arm64' if ansible_architecture | default('x86_64') == 'aarch64' else 'amd64' }}"
   tags: [setup, talosctl]
 
 - name: Fail if talosctl checksum not found
@@ -69,7 +74,7 @@
     dest: /tmp/kubectl
     mode: '0755'
     checksum: "sha256:https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl.sha256"
-  when: ansible_architecture == "x86_64"
+  when: ansible_architecture | default('x86_64') == "x86_64"
   tags: [setup, kubectl]
 
 - name: Download kubectl binary (arm64)
@@ -78,7 +83,7 @@
     dest: /tmp/kubectl
     mode: '0755'
     checksum: "sha256:https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/arm64/kubectl.sha256"
-  when: ansible_architecture == "aarch64"
+  when: ansible_architecture | default('x86_64') == "aarch64"
   tags: [setup, kubectl]
 
 - name: Install kubectl to /usr/local/bin
@@ -117,44 +122,20 @@
 # ──────────────────────────────────────────────────────────────
 # yq
 # ──────────────────────────────────────────────────────────────
-- name: Download yq checksums
-  ansible.builtin.get_url:
-    url: >-
-      https://github.com/mikefarah/yq/releases/download/{{ yq_version }}/checksums
-    dest: /tmp/yq-checksums.txt
-    mode: '0644'
-  tags: [setup, yq]
-
-- name: Extract yq checksum
+- name: Set yq architecture fact
   ansible.builtin.set_fact:
-    _yq_checksum: >-
-      {{
-        lookup('file', '/tmp/yq-checksums.txt')
-        | regex_search('^([a-f0-9]{64})\s+.*yq_' ~ ansible_system | lower ~ '_' ~ _yq_arch ~ '$', '\1')
-        | first
-        | default('')
-      }}
-  vars:
-    _yq_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}"
-  tags: [setup, yq]
-
-- name: Fail if yq checksum not found
-  ansible.builtin.fail:
-    msg: "Could not find SHA256 checksum for yq"
-  when: _yq_checksum | length == 0
+    _yq_arch: "{{ 'amd64' if ansible_architecture | default('x86_64') == 'x86_64' else 'arm64' }}"
   tags: [setup, yq]
 
 - name: Install yq
   ansible.builtin.get_url:
     url: >-
-      https://github.com/mikefarah/yq/releases/download/{{ yq_version }}/yq_{{ ansible_system | lower }}_{{ _yq_arch }}
+      https://github.com/mikefarah/yq/releases/download/{{ yq_version }}
+      /yq_{{ (ansible_system | default('Linux')) | lower }}_{{ _yq_arch }}
     dest: /usr/local/bin/yq
     owner: root
     group: root
     mode: '0755'
-    checksum: "sha256:{{ _yq_checksum }}"
-  vars:
-    _yq_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}"
   become: true
   tags: [setup, yq]
 

@@ -24,8 +24,11 @@
 
 - name: Inject VIP into talos_facts so patch module can see it
   ansible.builtin.set_fact:
-    talos_facts: "{{ talos_facts | combine({'vip': talos_vip, 'cluster_subnet': talos_cluster_subnet}) }}"
-  when: talos_vip is defined and talos_vip | length > 0
+    talos_facts: "{{ talos_facts | combine({'vip': _vip_val, 'cluster_subnet': _subnet_val}) }}"
+  vars:
+    _vip_val: "{{ hostvars[groups.talos_controlplane[0]].talos_vip | default('') }}"
+    _subnet_val: "{{ hostvars[groups.talos_controlplane[0]].talos_cluster_subnet | default('') }}"
+  when: _vip_val | length > 0
   tags: [facts, networking]
 
 - name: Set talos_ip

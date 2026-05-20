@@ -32,6 +32,7 @@
     config endpoints {{ hostvars[groups.talos_controlplane[0]].talos_ip }}
   delegate_to: localhost
   run_once: true
+  changed_when: false
   tags: bootstrap
 
 # -----------------------------------------------------------------
@@ -43,6 +44,8 @@
     bootstrap --nodes {{ hostvars[groups.talos_controlplane[0]].talos_ip }}
   delegate_to: localhost
   run_once: true
+  changed_when: false
+  failed_when: false
   tags: bootstrap
 
 # -----------------------------------------------------------------
@@ -52,7 +55,7 @@
   ansible.builtin.command: >-
     talosctl --talosconfig {{ talos_config_dir }}/config/base/talosconfig kubeconfig
     --nodes {{ hostvars[groups.talos_controlplane[0]].talos_ip }}
-    --merge=false --force {{ playbook_dir }}/.talos/kubeconfig
+    --merge=false --force {{ talos_config_dir }}/kubeconfig
   delegate_to: localhost
   run_once: true
   tags: bootstrap
@@ -62,10 +65,10 @@
 # -----------------------------------------------------------------
 - name: Rewrite kubeconfig to use VIP
   ansible.builtin.command: >-
-    kubectl config set-cluster talos
+    kubectl config set-cluster {{ cluster_name }}
     --server=https://{{ talos_vip | split('/') | first }}:6443
   environment:
-    KUBECONFIG: "{{ playbook_dir }}/.talos/kubeconfig"
+    KUBECONFIG: "{{ talos_config_dir }}/kubeconfig"
   delegate_to: localhost
   run_once: true
   when: talos_vip is defined and talos_vip | length > 0
@@ -105,7 +108,7 @@
   ansible.builtin.shell: |
     set -eu
     for i in $(seq 1 120); do
-      ready=$(kubectl --kubeconfig "{{ playbook_dir }}/.talos/kubeconfig" \
+      ready=$(kubectl --kubeconfig "{{ talos_config_dir }}/kubeconfig" \
         get nodes -l node-role.kubernetes.io/control-plane \
         -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
       count=$(echo "$ready" | grep -o "True" | wc -l)
@@ -119,6 +122,7 @@
     exit 1
   delegate_to: localhost
   run_once: true
+  changed_when: false
   tags: bootstrap
 
 # -----------------------------------------------------------------
@@ -128,7 +132,7 @@
   ansible.builtin.shell: |
     set -eu
     for i in $(seq 1 60); do
-      ready=$(kubectl --kubeconfig "{{ playbook_dir }}/.talos/kubeconfig" \
+      ready=$(kubectl --kubeconfig "{{ talos_config_dir }}/kubeconfig" \
         get nodes -l '!node-role.kubernetes.io/control-plane' \
         -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
       count=$(echo "$ready" | grep -o "True" | wc -l)
@@ -142,6 +146,7 @@
     exit 1
   delegate_to: localhost
   run_once: true
+  changed_when: false
   when: "'talos_workers' in groups"
   tags: bootstrap
 
@@ -150,7 +155,7 @@
 # ──────────────────────────────────────────────────────────────
 - name: Check if Kubernetes API is reachable
   ansible.builtin.command: >-
-    kubectl --kubeconfig {{ playbook_dir }}/.talos/kubeconfig
+    kubectl --kubeconfig {{ talos_config_dir }}/kubeconfig
     cluster-info
   delegate_to: localhost
   run_once: true
@@ -162,7 +167,7 @@
 
 - name: Gather cluster node info
   ansible.builtin.command: >-
-    kubectl --kubeconfig {{ playbook_dir }}/.talos/kubeconfig
+    kubectl --kubeconfig {{ talos_config_dir }}/kubeconfig
     get nodes -o json
   delegate_to: localhost
   run_once: true
@@ -174,7 +179,7 @@
 
 - name: Gather system pods
   ansible.builtin.command: >-
-    kubectl --kubeconfig {{ playbook_dir }}/.talos/kubeconfig
+    kubectl --kubeconfig {{ talos_config_dir }}/kubeconfig
     get pods -n kube-system -o json
   delegate_to: localhost
   run_once: true

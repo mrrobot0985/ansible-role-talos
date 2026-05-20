@@ -36,8 +36,12 @@
         install_disk: "{{ talos_facts.install_disk | default('') }}"
         kernel_parameters: "{{ _doc_kernel_params | default([]) }}"
         customizations:
-          extra_kernel_args: "{{ customization.extraKernelArgs | default([]) }}"
-          system_extensions: "{{ customization.systemExtensions.officialExtensions | default([]) }}"
+          extra_kernel_args: "{{ (customization | default({})).extraKernelArgs | default([]) }}"
+          system_extensions: >-
+            {{
+              ((customization | default({})).systemExtensions | default({}))
+              .officialExtensions | default([])
+            }}
           ntp_servers: "{{ talos_facts.timeservers_list | default([]) }}"
           dns_domain: "{{ cluster_dns_domain }}"
           dns_servers: "{{ cluster_dns_servers | default([]) }}"

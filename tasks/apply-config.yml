@@ -5,13 +5,14 @@
 # ──────────────────────────────────────────────────────────────
 - name: Apply config to node (use IP)
   ansible.builtin.command: >-
-    talosctl apply-config --insecure
+    talosctl apply-config
+    {{ '--insecure' if is_maintenance | default(false) else '' }}
     -n {{ talos_ip }}
     --file {{ talos_config_dir }}/generated/{{ inventory_hostname }}.yaml
   delegate_to: localhost
   when: not (talos_apply_dry_run | bool)
   register: apply_result
-  changed_when: apply_result.rc == 0 and not (talos_apply_dry_run | bool)
+  changed_when: apply_result.rc == 0
   failed_when: >-
     apply_result.rc != 0 and
     not (talos_apply_dry_run | bool and 'dry-run' in apply_result.stderr)

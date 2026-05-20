@@ -83,3 +83,12 @@
   run_once: true
   delegate_to: localhost
   tags: config
+
+- name: Set talosconfig endpoint to first control plane
+  ansible.builtin.command: >-
+    talosctl --talosconfig {{ talos_config_dir }}/config/base/talosconfig
+    config endpoints {{ hostvars[groups.talos_controlplane[0]].ansible_host }}
+  run_once: true
+  delegate_to: localhost
+  changed_when: false
+  tags: config

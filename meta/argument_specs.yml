@@ -38,7 +38,7 @@ argument_specs:
 
       cp_endpoint:
         type: str
-        default: "https://{{ hostvars[groups.talos_controlplane[0]].talos_ip }}:6443"
+        default: "https://{{ hostvars[groups.talos_controlplane[0]].ansible_host }}:6443"
         required: false
         description: Kubernetes API endpoint URL passed to talosctl gen config.
 
@@ -90,6 +90,26 @@ argument_specs:
         default: []
         required: false
         description: List of NTP servers for cluster time synchronization.
+
+      talos_cluster_dns:
+        type: list
+        elements: str
+        default: []
+        required: false
+        description: Alias for cluster_dns_servers, passed to the talos_patch filter.
+
+      talos_cluster_ntp:
+        type: list
+        elements: str
+        default: []
+        required: false
+        description: Alias for cluster_ntp_servers, passed to the talos_patch filter.
+
+      customization:
+        type: dict
+        default: {}
+        required: false
+        description: Per-node customization dictionary for extra kernel args and system extensions.
 
       control_plane_workloads:
         type: bool
@@ -164,6 +184,18 @@ argument_specs:
         default: "mkdocs"
         required: false
         description: Documentation output format. Currently only mkdocs is supported.
+
+      encrypt_talos_dir:
+        type: bool
+        default: false
+        required: false
+        description: When true, encrypts the .talos directory with ansible-vault.
+
+      vault_pass_file:
+        type: str
+        default: ".vault_pass"
+        required: false
+        description: Path to the ansible-vault password file.
 
       # ──────────────────────────────────────────────────────────────
       # Tool versions
