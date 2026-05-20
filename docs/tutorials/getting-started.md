@@ -1,43 +1,57 @@
 # Getting Started
 
-This tutorial walks you through deploying your first Talos Linux cluster on your local machine using Vagrant and libvirt.
+This tutorial walks you through deploying your first Talos Linux cluster using the role against real nodes.
 
 ## Prerequisites
 
-- Ubuntu 22.04+ (tested on 24.04)
-- CPU with virtualization enabled (VT-x/AMD-V)
-- At least 8 GB RAM
+- One or more servers booted from the Talos ISO in maintenance mode (port `50000` reachable)
+- Ansible >= 2.14 and Python 3.9+ on your control node
+- A network path from the control node to every Talos node on port `50000`
 
-## Step 1 — Install Dependencies
+## Step 1 — Create the Inventory
 
-```bash
-make install
+Create `inventory.yml`:
+
+```yaml
+---
+all:
+  children:
+    talos_controlplane:
+      hosts:
+        cp-1:
+          ansible_connection: local
+          talos_ip: 10.0.0.3
+          node_type: controlplane
+  vars:
+    cluster_name: mytalos
 ```
 
-This installs libvirt, QEMU, the vagrant-libvirt plugin, and Remmina.
+Replace `talos_ip` with the actual maintenance-mode IP of each node.
 
-> You may need to log out and back in for group changes to take effect.
+## Step 2 — Create a Playbook
 
-## Step 2 — Boot the VMs
+Create `site.yml`:
 
-```bash
-make up
+```yaml
+---
+- name: Deploy Talos Cluster
+  hosts: all
+  roles:
+    - name: mrrobot0985.talos
 ```
-
-This creates one control-plane VM, boots it from the Talos ISO, and generates `.vagrant/inventory.yml`.
 
 ## Step 3 — Dry-Run
 
 ```bash
-ansible-playbook -i .vagrant/inventory.yml tests/test.yml
+ansible-playbook -i inventory.yml site.yml
 ```
 
-Because `talos_apply_dry_run` defaults to `true`, the role generates configs and reports but does **not** touch the nodes. Review the output in `.talos/generated/`.
+The role generates configs and reports but does **not** touch the nodes. Review `.talos/generated/` before proceeding.
 
-## Step 4 — Deploy for Real
+## Step 4 — Deploy
 
 ```bash
-ansible-playbook -i .vagrant/inventory.yml tests/test.yml \
+ansible-playbook -i inventory.yml site.yml \
   -e talos_apply_dry_run=false \
   -e talos_force_generate=true
 ```
@@ -51,13 +65,10 @@ export KUBECONFIG=.talos/kubeconfig
 kubectl get nodes
 ```
 
-You should see your single control-plane node in the `Ready` state.
+You should see your control-plane node in the `Ready` state.
 
-## Cleanup
+## Testing Locally with Vagrant
 
-```bash
-make down   # destroy VMs
-make clean  # destroy VMs + wipe .talos/ and .vagrant/
-```
+If you want to test the role before deploying to real hardware, a Vagrant + libvirt development environment is included in the repository. See [Testing Locally](../how-to-guides/testing-locally.md) for details.
 
 Next: try the [HA cluster tutorial](deploy-ha-cluster.md).

@@ -1,6 +1,6 @@
 # Documentation
 
-Welcome to the `mrrobot0985.talos` documentation. Pick the section that matches what you need right now.
+Welcome to the `mrrobot0985.talos` documentation. This role targets real Talos Linux nodes in data centers, bare metal, or cloud VMs. A local Vagrant environment is included for testing and development only.
 
 | I want to... | Go to |
 | --- | --- |

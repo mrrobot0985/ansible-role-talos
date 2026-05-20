@@ -1,6 +1,6 @@
 # Deploy an HA Cluster
 
-This tutorial walks you through deploying a highly-available Talos control plane with worker nodes using the role.
+This tutorial walks you through deploying a highly-available Talos control plane with worker nodes to real servers.
 
 ## What You Will Build
 
@@ -10,7 +10,7 @@ This tutorial walks you through deploying a highly-available Talos control plane
 
 ## Step 1 — Create the Inventory
 
-Create `inventory.yml`:
+Create `inventory.yml` with your real node IPs:
 
 ```yaml
 ---
