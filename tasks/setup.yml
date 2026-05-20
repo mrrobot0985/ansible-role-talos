@@ -90,6 +90,7 @@
   failed_when: false
   register: maintenance_check
   delegate_to: localhost
+  when: not talos_apply_dry_run | bool
   tags: setup
 
 - name: Fail if node is not in maintenance mode
@@ -98,6 +99,8 @@
       Node {{ inventory_hostname }} ({{ talos_ip }}) is not in Talos
       maintenance mode. Boot from the Talos ISO and ensure port 50000
       is reachable.
-  when: maintenance_check.rc != 0
+  when:
+    - not talos_apply_dry_run | bool
+    - maintenance_check.rc != 0
   delegate_to: localhost
   tags: setup

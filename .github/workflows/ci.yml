@@ -45,11 +45,11 @@ jobs:
           npm install -g markdownlint-cli
           markdownlint docs/ README.md CONTRIBUTING.md
 
-  dry-run:
-    name: Dry-Run Config Generation
+  config-smoke:
+    name: Config Generation Smoke Test
     needs: lint
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
 
     steps:
       - uses: actions/checkout@v4
@@ -57,9 +57,14 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update -qq
-          sudo apt install -y ansible-core make
+          sudo apt install -y ansible-core yq
 
-      - name: Create test files
+      - name: Install talosctl
+        run: |
+          curl -sL https://talos.dev/install | sh
+          talosctl version
+
+      - name: Create test inventory
         run: |
           cat > ci-inventory.yml <<'INVENTORY'
           ---
@@ -68,42 +73,60 @@ jobs:
               talos_controlplane:
                 hosts:
                   cp-1:
+                    ansible_host: 192.168.121.100
                     talos_ip: 192.168.121.100
                     node_type: controlplane
+                  cp-2:
+                    ansible_host: 192.168.121.101
+                    talos_ip: 192.168.121.101
+                    node_type: controlplane
+              talos_workers:
+                hosts:
+                  worker-1:
+                    ansible_host: 192.168.121.200
+                    talos_ip: 192.168.121.200
+                    node_type: worker
             vars:
-              cluster_name: ci-test
+              cluster_name: ci-smoke
+              ansible_connection: local
           INVENTORY
 
+      - name: Run role (dry-run, setup + config only)
+        run: |
           cat > ci-playbook.yml <<'PLAYBOOK'
           ---
-          - name: CI Dry-Run Test
-            hosts: all
+          - name: Config Smoke Test
+            hosts: talos_controlplane:talos_workers
+            connection: local
+            gather_facts: false
             roles:
               - role: ansible-role-talos
                 vars:
                   talos_apply_dry_run: true
                   talos_force_generate: true
+                  talos_enable_vip: false
           PLAYBOOK
-
-      - name: Run setup and config phases
-        run: |
           ansible-playbook -i ci-inventory.yml ci-playbook.yml \
-            --tags setup,config \
-            -e ansible_role_path="${PWD}"
+            --tags setup,config
         env:
           ANSIBLE_ROLES_PATH: "${PWD}/.."
 
-      - name: Verify generated artifacts exist
+      - name: Verify generated artifacts
         run: |
           test -f .talos/config/base/controlplane.yaml
           test -f .talos/config/base/worker.yaml
           test -f .talos/config/base/talosconfig
           test -f .talos/config/secrets/secrets.yaml
+          echo "[+] Base configs generated OK"
 
       - name: Validate base configs with talosctl
         run: |
-          /usr/local/bin/talosctl validate --config .talos/config/base/controlplane.yaml || true
-          /usr/local/bin/talosctl validate --config .talos/config/base/worker.yaml || true
+          talosctl validate --mode metal --config .talos/config/base/controlplane.yaml
+          talosctl validate --mode metal --config .talos/config/base/worker.yaml
+
+      - name: Validate base configs are lint-clean YAML
+        run: |
+          yamllint .talos/config/base/
 
   publish:
     name: Publish to Ansible Galaxy
