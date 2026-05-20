@@ -56,9 +56,9 @@ jobs:
           sudo apt update -qq
           sudo apt install -y ansible-core make
 
-      - name: Create test inventory
+      - name: Create test files
         run: |
-          cat > /tmp/ci-inventory.yml <<'INVENTORY'
+          cat > ci-inventory.yml <<'INVENTORY'
           ---
           all:
             children:
@@ -72,9 +72,7 @@ jobs:
               cluster_name: ci-test
           INVENTORY
 
-      - name: Create test playbook
-        run: |
-          cat > /tmp/ci-playbook.yml <<'PLAYBOOK'
+          cat > ci-playbook.yml <<'PLAYBOOK'
           ---
           - name: CI Dry-Run Test
             hosts: all
@@ -87,7 +85,7 @@ jobs:
 
       - name: Run setup and config phases
         run: |
-          ansible-playbook -i /tmp/ci-inventory.yml /tmp/ci-playbook.yml \
+          ansible-playbook -i ci-inventory.yml ci-playbook.yml \
             --tags setup,config \
             -e ansible_role_path="${PWD}"
         env:
