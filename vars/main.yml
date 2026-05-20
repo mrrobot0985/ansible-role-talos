@@ -4,7 +4,7 @@
 # Working directories (runtime, not user-configurable)
 # ──────────────────────────────────────────────────────────────
 talos_config_dir: "{{ playbook_dir }}/.talos"
-talos_report_dir: "{{ playbook_dir }}/.talos/reports"
+talos_docs_dir: "{{ playbook_dir }}/.generated"
 talosconfig_path: "{{ talos_config_dir }}/talosconfig"
 
 # ──────────────────────────────────────────────────────────────

@@ -1,0 +1,305 @@
+---
+# Quick template validation playbook — runs against inventory.docs.yml, no Talos nodes required
+- name: Validate documentation templates
+  hosts: all
+  gather_facts: false
+  vars:
+    cluster_name: "test-cluster"
+    cluster_dns_domain: "cluster.local"
+    cluster_dns_servers:
+      - "8.8.8.8"
+    talos_vip: "192.168.1.100/24"
+    cni: "cilium"
+    talos_docs_dir: "/tmp/.generated"
+    talos_facts:
+      version: "v1.11.5"
+      machinestatus_ready: true
+      machinestatus_stage: "running"
+      usable_disks:
+        - dev_path: "/dev/sda"
+          pretty_size: "120 GB"
+          transport: "sata"
+          size: 128849018880
+        - dev_path: "/dev/nvme0"
+          pretty_size: "1 TB"
+          transport: "nvme"
+          size: 1099511627776
+      install_disk: "/dev/sda"
+      global_addresses:
+        - address: "192.168.1.11/24"
+          family: "inet4"
+          link_name: "eth0"
+          scope: "global"
+        - address: "10.0.0.5/24"
+          family: "inet4"
+          link_name: "eth1"
+          scope: "global"
+      all_interfaces:
+        - name: "eth0"
+          hardware_addr: "aa:bb:cc:dd:ee:ff"
+          driver: "igb"
+          link_state: true
+          mtu: 1500
+          operational_state: "up"
+        - name: "eth1"
+          hardware_addr: "11:22:33:44:55:66"
+          driver: "igb"
+          link_state: true
+          mtu: 1500
+          operational_state: "up"
+      primary_interface: "eth0"
+      changed_kernel_params:
+        console:
+          current: "ttyS0"
+          default: "tty0"
+      timeservers_list:
+        - "time.google.com"
+    talos_network_global:
+      has_cni: true
+      vip: "192.168.1.100/24"
+      cluster_subnet: "192.168.1.0/24"
+    customization:
+      extraKernelArgs:
+        - "console=ttyS0"
+      systemExtensions:
+        officialExtensions:
+          - "qemu-guest-agent"
+    _cluster_report:
+      kube_api_reachable: true
+      talos_version: "v1.11.5"
+      nodes:
+        - name: "cp-1"
+          roles: "control-plane"
+          internal_ip: "192.168.1.11"
+          status: "True"
+          version: "v1.30.0"
+        - name: "cp-2"
+          roles: "control-plane"
+          internal_ip: "192.168.1.12"
+          status: "True"
+          version: "v1.30.0"
+        - name: "worker-1"
+          roles: "worker"
+          internal_ip: "192.168.1.21"
+          status: "True"
+          version: "v1.30.0"
+      system_pods:
+        - name: "cilium-xxx"
+          ready: "1/1"
+          restarts: 0
+          node: "cp-1"
+      component_statuses: []
+    ansible_date_time:
+      iso8601: "2026-05-20T12:00:00+00:00"
+
+  pre_tasks:
+    - name: Set per-host node type
+      ansible.builtin.set_fact:
+        node_type: >-
+          {{ 'controlplane' if inventory_hostname in groups['talos_controlplane'] else 'worker' }}
+        talos_ip: "{{ ansible_host }}"
+
+    - name: Ensure test output dirs exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      loop:
+        - "{{ talos_docs_dir }}/docs/nodes"
+        - "{{ talos_docs_dir }}/data/nodes"
+
+  tasks:
+    - name: Render node data template
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/docs_node_data.yml.j2"
+        dest: "{{ talos_docs_dir }}/data/nodes/{{ inventory_hostname }}.yml"
+        mode: "0644"
+      delegate_to: localhost
+
+    - name: Render node markdown template
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/docs_node.md.j2"
+        dest: "{{ talos_docs_dir }}/docs/nodes/{{ inventory_hostname }}.md"
+        mode: "0644"
+      delegate_to: localhost
+
+    - name: Align tables in node markdown
+      ansible.builtin.shell: |
+        python3 -c '
+        import sys
+        def align(path):
+            with open(path) as f: lines = f.read().splitlines()
+            out, table = [], []
+            for line in lines:
+                s = line.strip()
+                if s.startswith("|") and s.endswith("|"):
+                    table.append(s)
+                    continue
+                if table:
+                    rows = [[c.strip() for c in r[1:-1].split("|")] for r in table]
+                    cols = max(len(r) for r in rows)
+                    w = [0] * cols
+                    for r in rows:
+                        for i, c in enumerate(r):
+                            w[i] = max(w[i], len(c))
+                    for r in rows:
+                        cells = [" " + (r[i] if i < len(r) else "").ljust(w[i]) + " " for i in range(cols)]
+                        out.append("|" + "|".join(cells) + "|")
+                    table = []
+                out.append(line)
+            if table:
+                rows = [[c.strip() for c in r[1:-1].split("|")] for r in table]
+                cols = max(len(r) for r in rows)
+                w = [0] * cols
+                for r in rows:
+                    for i, c in enumerate(r):
+                        w[i] = max(w[i], len(c))
+                for r in rows:
+                    cells = [" " + (r[i] if i < len(r) else "").ljust(w[i]) + " " for i in range(cols)]
+                    out.append("|" + "|".join(cells) + "|")
+            with open(path, "w") as f:
+                f.write("\n".join(out) + "\n")
+        for p in sys.argv[1:]:
+            align(p)
+        ' '{{ talos_docs_dir }}/docs/nodes/{{ inventory_hostname }}.md'
+      delegate_to: localhost
+
+  post_tasks:
+    - name: Render cluster data template
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/docs_cluster_data.yml.j2"
+        dest: "{{ talos_docs_dir }}/data/cluster.yml"
+        mode: "0644"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Render cluster markdown template
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/docs_cluster.md.j2"
+        dest: "{{ talos_docs_dir }}/docs/cluster.md"
+        mode: "0644"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Align tables in cluster markdown
+      ansible.builtin.shell: |
+        python3 -c '
+        import sys
+        def align(path):
+            with open(path) as f: lines = f.read().splitlines()
+            out, table = [], []
+            for line in lines:
+                s = line.strip()
+                if s.startswith("|") and s.endswith("|"):
+                    table.append(s)
+                    continue
+                if table:
+                    rows = [[c.strip() for c in r[1:-1].split("|")] for r in table]
+                    cols = max(len(r) for r in rows)
+                    w = [0] * cols
+                    for r in rows:
+                        for i, c in enumerate(r):
+                            w[i] = max(w[i], len(c))
+                    for r in rows:
+                        cells = [" " + (r[i] if i < len(r) else "").ljust(w[i]) + " " for i in range(cols)]
+                        out.append("|" + "|".join(cells) + "|")
+                    table = []
+                out.append(line)
+            if table:
+                rows = [[c.strip() for c in r[1:-1].split("|")] for r in table]
+                cols = max(len(r) for r in rows)
+                w = [0] * cols
+                for r in rows:
+                    for i, c in enumerate(r):
+                        w[i] = max(w[i], len(c))
+                for r in rows:
+                    cells = [" " + (r[i] if i < len(r) else "").ljust(w[i]) + " " for i in range(cols)]
+                    out.append("|" + "|".join(cells) + "|")
+            with open(path, "w") as f:
+                f.write("\n".join(out) + "\n")
+        for p in sys.argv[1:]:
+            align(p)
+        ' '{{ talos_docs_dir }}/docs/cluster.md'
+      delegate_to: localhost
+      run_once: true
+
+    - name: Render index template
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/docs_index.md.j2"
+        dest: "{{ talos_docs_dir }}/docs/index.md"
+        mode: "0644"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Align tables in index markdown
+      ansible.builtin.shell: |
+        python3 -c '
+        import sys
+        def align(path):
+            with open(path) as f: lines = f.read().splitlines()
+            out, table = [], []
+            for line in lines:
+                s = line.strip()
+                if s.startswith("|") and s.endswith("|"):
+                    table.append(s)
+                    continue
+                if table:
+                    rows = [[c.strip() for c in r[1:-1].split("|")] for r in table]
+                    cols = max(len(r) for r in rows)
+                    w = [0] * cols
+                    for r in rows:
+                        for i, c in enumerate(r):
+                            w[i] = max(w[i], len(c))
+                    for r in rows:
+                        cells = [" " + (r[i] if i < len(r) else "").ljust(w[i]) + " " for i in range(cols)]
+                        out.append("|" + "|".join(cells) + "|")
+                    table = []
+                out.append(line)
+            if table:
+                rows = [[c.strip() for c in r[1:-1].split("|")] for r in table]
+                cols = max(len(r) for r in rows)
+                w = [0] * cols
+                for r in rows:
+                    for i, c in enumerate(r):
+                        w[i] = max(w[i], len(c))
+                for r in rows:
+                    cells = [" " + (r[i] if i < len(r) else "").ljust(w[i]) + " " for i in range(cols)]
+                    out.append("|" + "|".join(cells) + "|")
+            with open(path, "w") as f:
+                f.write("\n".join(out) + "\n")
+        for p in sys.argv[1:]:
+            align(p)
+        ' '{{ talos_docs_dir }}/docs/index.md'
+      delegate_to: localhost
+      run_once: true
+
+    - name: Render mkdocs config template
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/docs_mkdocs.yml.j2"
+        dest: "{{ talos_docs_dir }}/mkdocs.yml"
+        mode: "0644"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Validate generated YAML files parse
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+      delegate_to: localhost
+      run_once: true
+      loop:
+        - "{{ talos_docs_dir }}/data/nodes/cp-1.yml"
+        - "{{ talos_docs_dir }}/data/cluster.yml"
+
+    - name: Show generated files
+      ansible.builtin.debug:
+        msg: "Generated {{ item }}"
+      delegate_to: localhost
+      run_once: true
+      loop:
+        - "{{ talos_docs_dir }}/data/nodes/cp-1.yml"
+        - "{{ talos_docs_dir }}/docs/nodes/cp-1.md"
+        - "{{ talos_docs_dir }}/data/cluster.yml"
+        - "{{ talos_docs_dir }}/docs/cluster.md"
+        - "{{ talos_docs_dir }}/docs/index.md"
+        - "{{ talos_docs_dir }}/mkdocs.yml"

@@ -1,0 +1,95 @@
+---
+title: "Node {{ inventory_hostname }}"
+description: "Talos node documentation for {{ inventory_hostname }}"
+---
+
+> **Role:** `{{ node_type | capitalize }}`
+> **Site:** `{{ cluster_name }}`
+> **Platform:** Talos Linux `{{ talos_facts.version | default('unknown') }}`
+> **Management IP:** `{{ talos_ip }}`
+> **Status:** {{ 'Active' if talos_facts.machinestatus_ready | default(false) else 'Planned' }}
+
+---
+
+## Current State
+
+| Indicator        | Status                        | Details |
+|------------------|-------------------------------|---------|
+| Boot Stage       | `{{ talos_facts.machinestatus_stage | default('unknown') }}` | Talos internal stage |
+| Machine Ready    | {{ 'Yes' if talos_facts.machinestatus_ready | default(false) else 'No' }} | Talos readiness |
+| CNI Active       | {{ 'Yes' if talos_network_global.has_cni | default(false) else 'No' }} | Pod network |
+| VIP Active       | {{ 'Yes' if talos_network_global.vip | default('', true) | length > 0 else 'No' }} | {{ talos_network_global.vip | default('N/A') }} |
+
+---
+
+## Disks
+
+{% if talos_facts.usable_disks | default([], true) | length > 0 %}
+| Device | Size | Transport |
+|--------|------|-----------|
+{% for disk in talos_facts.usable_disks %}
+| `{{ disk.dev_path }}` | {{ disk.pretty_size }} | {{ disk.transport }} |
+{% endfor %}
+
+> **Selected install disk:** `{{ talos_facts.install_disk | default('None') }}`
+{% else %}
+*No usable disks detected.*
+{% endif %}
+
+---
+
+## Network Interfaces
+
+{% if talos_facts.all_interfaces | default([], true) | length > 0 %}
+| Interface | MAC | Driver | State | Primary | IP Addresses |
+|-----------|-----|--------|-------|---------|--------------|
+{% for intf in talos_facts.all_interfaces %}
+{% set intf_addrs = talos_facts.global_addresses | default([], true) | selectattr('link_name', 'equalto', intf.name) | list %}
+{% set addr_str = intf_addrs | map(attribute='address') | join(', ') %}
+| `{{ intf.name }}` | `{{ intf.hardware_addr }}` | {{ intf.driver }} | {{ 'UP' if intf.link_state else 'DOWN' }} | {% if intf.name == talos_facts.primary_interface | default('') %}**Yes**{% else %}--{% endif %} | {{ addr_str | default('None') }} |
+{% endfor %}
+{% else %}
+*No interfaces detected.*
+{% endif %}
+
+---
+
+## Kernel Parameters (Non-default)
+
+{% if talos_facts.changed_kernel_params | default({}, true) | length > 0 %}
+| Parameter | Current | Default |
+|-----------|---------|---------|
+{% for param, vals in talos_facts.changed_kernel_params.items() %}
+| `{{ param }}` | `{{ vals.current }}` | `{{ vals.default }}` |
+{% endfor %}
+{% else %}
+*All kernel parameters at Talos defaults.*
+{% endif %}
+
+---
+
+## Customizations
+
+### Extra Kernel Arguments
+
+{% if customization.extraKernelArgs | default([], true) | length > 0 %}
+{% for arg in customization.extraKernelArgs %}
+- `{{ arg }}`
+{% endfor %}
+{% else %}
+*None.*
+{% endif %}
+
+### System Extensions
+
+{% if customization.systemExtensions.officialExtensions | default([], true) | length > 0 %}
+{% for ext in customization.systemExtensions.officialExtensions %}
+- `{{ ext }}`
+{% endfor %}
+{% else %}
+*None.*
+{% endif %}
+
+---
+
+*Generated from live node facts by the Talos role.*

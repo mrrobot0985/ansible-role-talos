@@ -1,0 +1,22 @@
+---
+# Install mkdocs-material for generated documentation browsing
+
+- name: Check if mkdocs is available
+  ansible.builtin.command: mkdocs --version
+  changed_when: false
+  ignore_errors: true
+  register: _mkdocs_check
+  tags: [setup, docs, mkdocs]
+
+- name: Install mkdocs-material via pip
+  ansible.builtin.pip:
+    name: mkdocs-material
+    state: present
+  become: true
+  when: _mkdocs_check.rc != 0
+  tags: [setup, docs, mkdocs]
+
+- name: Verify mkdocs
+  ansible.builtin.command: mkdocs --version
+  changed_when: false
+  tags: [setup, docs, mkdocs]

@@ -1,0 +1,15 @@
+---
+talos_controlplane:
+  hosts:
+    cp-1:
+      ansible_host: 192.168.1.11
+      talos_ip: 192.168.1.11
+    cp-2:
+      ansible_host: 192.168.1.12
+      talos_ip: 192.168.1.12
+
+talos_workers:
+  hosts:
+    worker-1:
+      ansible_host: 192.168.1.21
+      talos_ip: 192.168.1.21

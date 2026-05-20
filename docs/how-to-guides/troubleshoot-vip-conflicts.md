@@ -9,7 +9,7 @@ If the VIP overlaps with an existing IP, the cluster endpoint will be unreachabl
 
 ## Diagnosis
 
-Check `.talos/reports/<cluster_name>/node_*.md` for the calculated VIP and subnet.
+Check `.generated/nodes/*.md` for the calculated VIP and subnet.
 
 ## Fix
 

@@ -1,16 +1,69 @@
 ---
 # ──────────────────────────────────────────────────────────────
-# Node report
+# Node documentation
 # ──────────────────────────────────────────────────────────────
 - name: Set talos_ip
   ansible.builtin.set_fact:
     talos_ip: "{{ hostvars[inventory_hostname]['talos_ip'] | default(hostvars[inventory_hostname]['ansible_host']) }}"
   tags: [facts, node_report]
 
-- name: Generate node report
+- name: Generate node documentation data
   ansible.builtin.template:
-    src: node_report.j2
-    dest: "{{ talos_report_dir }}/{{ cluster_name }}/node_{{ inventory_hostname }}.md"
+    src: docs_node_data.yml.j2
+    dest: "{{ talos_docs_dir }}/data/nodes/{{ inventory_hostname }}.yml"
     mode: '0644'
   delegate_to: localhost
-  tags: [facts, node_report]
+  tags: [facts, docs, node_report]
+  when: talos_generate_docs | bool
+
+- name: Generate node documentation page
+  ansible.builtin.template:
+    src: docs_node.md.j2
+    dest: "{{ talos_docs_dir }}/docs/nodes/{{ inventory_hostname }}.md"
+    mode: '0644'
+  delegate_to: localhost
+  tags: [facts, docs, node_report]
+  when: talos_generate_docs | bool
+
+- name: Align tables in node documentation
+  ansible.builtin.shell: |
+    python3 -c '
+    import sys
+    def align(path):
+        with open(path) as f: lines = f.read().splitlines()
+        out, table = [], []
+        for line in lines:
+            s = line.strip()
+            if s.startswith("|") and s.endswith("|"):
+                table.append(s)
+                continue
+            if table:
+                rows = [[c.strip() for c in r[1:-1].split("|")] for r in table]
+                cols = max(len(r) for r in rows)
+                w = [0] * cols
+                for r in rows:
+                    for i, c in enumerate(r):
+                        w[i] = max(w[i], len(c))
+                for r in rows:
+                    cells = [" " + (r[i] if i < len(r) else "").ljust(w[i]) + " " for i in range(cols)]
+                    out.append("|" + "|".join(cells) + "|")
+                table = []
+            out.append(line)
+        if table:
+            rows = [[c.strip() for c in r[1:-1].split("|")] for r in table]
+            cols = max(len(r) for r in rows)
+            w = [0] * cols
+            for r in rows:
+                for i, c in enumerate(r):
+                    w[i] = max(w[i], len(c))
+            for r in rows:
+                cells = [" " + (r[i] if i < len(r) else "").ljust(w[i]) + " " for i in range(cols)]
+                out.append("|" + "|".join(cells) + "|")
+        with open(path, "w") as f:
+            f.write("\n".join(out) + "\n")
+    for p in sys.argv[1:]:
+        align(p)
+    ' '{{ talos_docs_dir }}/docs/nodes/{{ inventory_hostname }}.md'
+  delegate_to: localhost
+  tags: [facts, docs, node_report]
+  when: talos_generate_docs | bool

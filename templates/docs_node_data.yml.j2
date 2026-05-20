@@ -1,0 +1,81 @@
+device:
+  name: "{{ inventory_hostname }}"
+  site: "{{ cluster_name }}"
+  role: "{{ node_type }}"
+  platform: "Talos Linux {{ talos_facts.version | default('unknown') }}"
+  status: "{{ 'active' if talos_facts.machinestatus_ready | default(false) else 'planned' }}"
+  serial: ""
+  management_ip: "{{ talos_ip | default('') }}"
+  interfaces:
+{% if talos_facts.all_interfaces | default([], true) | length > 0 %}
+{% for intf in talos_facts.all_interfaces %}
+    - name: "{{ intf.name }}"
+      driver: "{{ intf.driver }}"
+      hardware_addr: "{{ intf.hardware_addr }}"
+      link_state: {{ intf.link_state }}
+      mtu: {{ intf.mtu }}
+      operational_state: "{{ intf.operational_state }}"
+{% endfor %}
+{% else %}
+    []
+{% endif %}
+  disks:
+{% if talos_facts.usable_disks | default([], true) | length > 0 %}
+{% for disk in talos_facts.usable_disks %}
+    - dev_path: "{{ disk.dev_path }}"
+      pretty_size: "{{ disk.pretty_size }}"
+      size: {{ disk.size }}
+      transport: "{{ disk.transport }}"
+{% endfor %}
+{% else %}
+    []
+{% endif %}
+  install_disk: "{{ talos_facts.install_disk | default('') }}"
+  kernel_parameters:
+{% if talos_facts.changed_kernel_params | default({}, true) | length > 0 %}
+{% for param, vals in talos_facts.changed_kernel_params.items() %}
+    - parameter: "{{ param }}"
+      current: "{{ vals.current }}"
+      default: "{{ vals.default }}"
+{% endfor %}
+{% else %}
+    []
+{% endif %}
+  customizations:
+    extra_kernel_args:
+{% if customization.extraKernelArgs | default([], true) | length > 0 %}
+{% for arg in customization.extraKernelArgs %}
+      - "{{ arg }}"
+{% endfor %}
+{% else %}
+      []
+{% endif %}
+    system_extensions:
+{% if customization.systemExtensions.officialExtensions | default([], true) | length > 0 %}
+{% for ext in customization.systemExtensions.officialExtensions %}
+      - "{{ ext }}"
+{% endfor %}
+{% else %}
+      []
+{% endif %}
+    ntp_servers:
+{% if talos_facts.timeservers_list | default([], true) | length > 0 %}
+{% for srv in talos_facts.timeservers_list %}
+      - "{{ srv }}"
+{% endfor %}
+{% else %}
+      []
+{% endif %}
+    dns_domain: "{{ cluster_dns_domain }}"
+    dns_servers:
+{% if cluster_dns_servers | default([], true) | length > 0 %}
+{% for srv in cluster_dns_servers %}
+      - "{{ srv }}"
+{% endfor %}
+{% else %}
+      []
+{% endif %}
+  machine_status:
+    stage: "{{ talos_facts.machinestatus_stage | default('unknown') }}"
+    ready: {{ talos_facts.machinestatus_ready | default(false) }}
+    booted_with_cni: {{ talos_network_global.has_cni | default(false) }}

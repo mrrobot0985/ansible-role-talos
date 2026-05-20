@@ -32,6 +32,12 @@ bootstrap_timeout: 1200               # Wait for nodes (seconds)
 report_timeout: 300                   # Wait for pods/API (seconds)
 
 # ──────────────────────────────────────────────────────────────
+# Documentation generation
+# ──────────────────────────────────────────────────────────────
+talos_generate_docs: true                # Set false to skip MkDocs/data output
+talos_docs_format: "mkdocs"             # Future-proof: only mkdocs supported today
+
+# ──────────────────────────────────────────────────────────────
 # Additional packages
 # ──────────────────────────────────────────────────────────────
 yq_version: "v4.48.2"                  # or whatever version you want

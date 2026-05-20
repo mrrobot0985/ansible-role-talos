@@ -69,6 +69,6 @@ You should see your control-plane node in the `Ready` state.
 
 ## Testing Locally with Vagrant
 
-If you want to test the role before deploying to real hardware, a Vagrant + libvirt development environment is included in the repository. See [Testing Locally](../how-to-guides/testing-locally.md) for details.
+If you want to test the role before deploying to real hardware, a Vagrant + libvirt development environment is included in the repository. See the [Vagrant tutorial](test-with-vagrant.md) for a step-by-step walkthrough, or the [Testing Locally](../how-to-guides/testing-locally.md) reference for full environment details.
 
 Next: try the [HA cluster tutorial](deploy-ha-cluster.md).

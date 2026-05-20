@@ -51,8 +51,8 @@ temp/
 *.tar.gz
 galaxy.yml.bak
 
-# === Data directory ===
-data/
+# === Generated documentation ===
+.generated/
 
 # === Vagrant directory ===
 .vagrant

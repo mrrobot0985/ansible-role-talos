@@ -11,10 +11,22 @@
     - "{{ talos_config_dir }}/config/secrets"
     - "{{ talos_config_dir }}/patches/nodes"
     - "{{ talos_config_dir }}/generated"
-    - "{{ talos_report_dir }}/{{ cluster_name }}"
   run_once: true
   delegate_to: localhost
   tags: setup
+
+- name: Create docs directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0700"
+  loop:
+    - "{{ talos_docs_dir }}/docs/nodes"
+    - "{{ talos_docs_dir }}/data/nodes"
+  run_once: true
+  delegate_to: localhost
+  tags: [setup, docs]
+  when: talos_generate_docs | bool
 
 - name: Ignore .talos in git
   ansible.builtin.copy:
@@ -58,3 +70,7 @@
 - import_tasks: 03-yq.yml
   run_once: true
   tags: [setup, yq]
+
+- import_tasks: 04-mkdocs.yml
+  run_once: true
+  tags: [setup, docs, mkdocs]

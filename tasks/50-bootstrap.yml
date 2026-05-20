@@ -142,10 +142,23 @@
   run_once: true
   tags: cluster_report
 
-- name: Render final cluster report
+# ──────────────────────────────────────────────────────────────
+# Generate documentation
+# ──────────────────────────────────────────────────────────────
+- name: Generate cluster documentation data
   ansible.builtin.template:
-    src: cluster_report.j2
-    dest: "{{ talos_report_dir }}/{{ cluster_name }}/cluster_report.md"
+    src: docs_cluster_data.yml.j2
+    dest: "{{ talos_docs_dir }}/data/cluster.yml"
+    mode: '0644'
+  delegate_to: localhost
+  run_once: true
+  tags: [bootstrap, docs, cluster_report]
+  when: talos_generate_docs | bool
+
+- name: Generate cluster documentation page
+  ansible.builtin.template:
+    src: docs_cluster.md.j2
+    dest: "{{ talos_docs_dir }}/docs/cluster.md"
     mode: '0644'
   vars:
     network_module_result: "{{ hostvars[groups.talos_controlplane[0]].talos_network_global }}"
@@ -156,10 +169,76 @@
     cni: "{{ _cluster_report.cni }}"
   delegate_to: localhost
   run_once: true
-  tags: cluster_report
+  tags: [bootstrap, docs, cluster_report]
+  when: talos_generate_docs | bool
 
-- name: Cluster report generated
-  ansible.builtin.debug:
-    msg: "Cluster report written to {{ talos_report_dir }}/{{ cluster_name }}/cluster_report.md"
+- name: Generate documentation index page
+  ansible.builtin.template:
+    src: docs_index.md.j2
+    dest: "{{ talos_docs_dir }}/docs/index.md"
+    mode: '0644'
+  delegate_to: localhost
   run_once: true
-  tags: cluster_report
+  tags: [bootstrap, docs, cluster_report]
+  when: talos_generate_docs | bool
+
+- name: Align tables in cluster documentation
+  ansible.builtin.shell: |
+    python3 -c '
+    import sys
+    def align(path):
+        with open(path) as f: lines = f.read().splitlines()
+        out, table = [], []
+        for line in lines:
+            s = line.strip()
+            if s.startswith("|") and s.endswith("|"):
+                table.append(s)
+                continue
+            if table:
+                rows = [[c.strip() for c in r[1:-1].split("|")] for r in table]
+                cols = max(len(r) for r in rows)
+                w = [0] * cols
+                for r in rows:
+                    for i, c in enumerate(r):
+                        w[i] = max(w[i], len(c))
+                for r in rows:
+                    cells = [" " + (r[i] if i < len(r) else "").ljust(w[i]) + " " for i in range(cols)]
+                    out.append("|" + "|".join(cells) + "|")
+                table = []
+            out.append(line)
+        if table:
+            rows = [[c.strip() for c in r[1:-1].split("|")] for r in table]
+            cols = max(len(r) for r in rows)
+            w = [0] * cols
+            for r in rows:
+                for i, c in enumerate(r):
+                    w[i] = max(w[i], len(c))
+            for r in rows:
+                cells = [" " + (r[i] if i < len(r) else "").ljust(w[i]) + " " for i in range(cols)]
+                out.append("|" + "|".join(cells) + "|")
+        with open(path, "w") as f:
+            f.write("\n".join(out) + "\n")
+    for p in sys.argv[1:]:
+        align(p)
+    ' '{{ talos_docs_dir }}/docs/cluster.md' '{{ talos_docs_dir }}/docs/index.md'
+  delegate_to: localhost
+  run_once: true
+  tags: [bootstrap, docs, cluster_report]
+  when: talos_generate_docs | bool
+
+- name: Generate MkDocs configuration
+  ansible.builtin.template:
+    src: docs_mkdocs.yml.j2
+    dest: "{{ talos_docs_dir }}/mkdocs.yml"
+    mode: '0644'
+  delegate_to: localhost
+  run_once: true
+  tags: [bootstrap, docs, cluster_report]
+  when: talos_generate_docs | bool
+
+- name: Documentation generated
+  ansible.builtin.debug:
+    msg: "Documentation written to {{ talos_docs_dir }} — run 'cd {{ talos_docs_dir }} && mkdocs serve' to browse"
+  run_once: true
+  tags: [bootstrap, docs, cluster_report]
+  when: talos_generate_docs | bool

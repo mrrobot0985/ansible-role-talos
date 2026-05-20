@@ -1,0 +1,57 @@
+---
+title: "Cluster {{ cluster_name }}"
+description: "Talos cluster documentation for {{ cluster_name }}"
+---
+
+> **Generated:** `{{ ansible_date_time.iso8601 }}`
+> **Talos Version:** `{{ talos_facts.version | default('unknown') }}`
+> **CNI:** `{{ cni | default('unknown') | capitalize }}`
+{% if talos_vip | default('', true) | length > 0 %}
+> **VIP:** `{{ talos_vip }}`
+{% endif %}
+
+---
+
+## Cluster Health
+
+| Component       | Status     | Notes |
+|-----------------|------------|-------|
+| Kubernetes API  | {{ 'Reachable' if _cluster_report.kube_api_reachable | default(false) else 'Unreachable' }} | {% if _cluster_report.kube_api_reachable | default(false) %}OK{% else %}Not yet available{% endif %} |
+{% if talos_vip | default('', true) | length > 0 %}
+| VIP             | Active     | Bound on all control planes |
+{% endif %}
+
+---
+
+## Nodes
+
+| Hostname | Role | Internal IP | Ready | Kubelet Version |
+|----------|------|-------------|-------|-----------------|
+{% for node in _cluster_report.nodes | default([], true) %}
+| {{ node.name }} | {{ (node.roles | default('worker')) | capitalize }} | {{ node.internal_ip }} | {{ 'Yes' if node.status == 'True' else 'No' }} | {{ node.version }} |
+{% endfor %}
+
+---
+
+## System Pods (kube-system)
+
+| Pod Name | Ready | Restarts | Node |
+|----------|-------|----------|------|
+{% for pod in _cluster_report.system_pods | default([], true) %}
+| {{ pod.name }} | {{ pod.ready }} | {{ pod.restarts }} | {{ pod.node }} |
+{% endfor %}
+
+---
+
+## Access
+
+{% if talos_vip | default('', true) | length > 0 %}
+- **Kubernetes API:** `https://{{ talos_vip | split('/') | first }}:6443`
+{% else %}
+- **Kubernetes API:** `https://{{ hostvars[groups.talos_controlplane[0]].talos_ip }}:6443`
+{% endif %}
+- **Kubeconfig:** `./.talos/kubeconfig`
+
+---
+
+*Generated from live cluster data by the Talos role.*

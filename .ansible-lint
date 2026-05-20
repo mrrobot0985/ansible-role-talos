@@ -8,3 +8,4 @@ skip_list:  # Justified for talosctl (immutable OS, JSON patching)
   - name[missing]  # Imports named at file level
   - role-name[path]  # Tests use relative paths
   - risky-shell-pipe  # Local talosctl only
+  - no-relative-paths  # Tests reference role templates via relative path

@@ -6,7 +6,7 @@ The role executes in six strictly ordered phases via `import_tasks`:
 
 ### 1. Setup (`00-setup.yml`)
 
-- Creates `.talos/` subdirectories (`config/base`, `config/secrets`, `patches/nodes`, `generated`, `reports/`)
+- Creates `.talos/` subdirectories (`config/base`, `config/secrets`, `patches/nodes`, `generated`, `.generated/`)
 - Optionally encrypts `.talos/` with `ansible-vault`
 - Ensures `/usr/local/bin` is in `PATH`
 - Installs `talosctl` (pinned version, amd64/arm64 aware)
@@ -80,7 +80,7 @@ The role executes in six strictly ordered phases via `import_tasks`:
 - Waits for Kubernetes API to become reachable (VIP or bootstrap node)
 - Waits for all control plane nodes to report `Ready`
 - Waits for all worker nodes to report `Ready`
-- Generates cluster-wide Markdown report (node list, system pods, component statuses, CNI)
+- Generates cluster documentation (Markdown report, index, mkdocs.yml) including node list, system pods, component statuses, and CNI detection
 
 ## Custom Python Modules
 

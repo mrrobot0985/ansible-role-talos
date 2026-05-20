@@ -5,6 +5,7 @@ Welcome to the `mrrobot0985.talos` documentation. This role targets real Talos L
 | I want to... | Go to |
 | --- | --- |
 | Learn how to deploy a cluster from scratch | [Tutorials](tutorials/getting-started.md) |
+| Test locally with Vagrant VMs | [Vagrant Tutorial](tutorials/test-with-vagrant.md) |
 | Solve a specific problem | [How-To Guides](how-to-guides/) |
 | Look up a variable, tag, or module | [Reference](reference/variables.md) |
 | Understand why the role works this way | [Explanation](explanation/why-zero-touch.md) |
