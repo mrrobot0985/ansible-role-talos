@@ -1,5 +1,10 @@
 # mrrobot0985.talos
 
+[![CI](https://github.com/mrrobot0985/ansible-role-talos/actions/workflows/ci.yml/badge.svg)](https://github.com/mrrobot0985/ansible-role-talos/actions/workflows/ci.yml)
+[![Ansible Galaxy](https://img.shields.io/badge/galaxy-mrrobot0985.talos-blue.svg)](https://galaxy.ansible.com/mrrobot0985/talos)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
+[![Ansible](https://img.shields.io/badge/ansible-%3E%3D2.14-black.svg)](https://docs.ansible.com/ansible/latest/index.html)
+
 > Production-grade, zero-touch Ansible role for deploying **Talos Linux Kubernetes clusters** using only live node facts — no manual YAML editing required.
 
 ---
