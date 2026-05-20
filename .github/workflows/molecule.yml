@@ -1,0 +1,59 @@
+---
+name: Molecule Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  molecule:
+    name: Molecule ${{ matrix.scenario }} (Talos ${{ matrix.talos_version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        talos_version: ["v1.10.0", "v1.11.5"]
+        scenario: ["default", "ha"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible-core ansible-lint molecule molecule-plugins
+
+      - name: Install KVM and libvirt
+        run: |
+          sudo apt update -qq
+          sudo apt install -y qemu-kvm libvirt-daemon-system \
+            libvirt-clients bridge-utils
+          sudo usermod -aG libvirt $USER
+          sudo systemctl start libvirtd
+
+      - name: Install Vagrant
+        run: |
+          wget -O- https://apt.releases.hashicorp.com/gpg | \
+            sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+            https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
+            sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt update -qq
+          sudo apt install -y vagrant
+          vagrant plugin install vagrant-libvirt
+
+      - name: Run Molecule
+        run: |
+          export TALOS_VERSION=${{ matrix.talos_version }}
+          molecule test -s ${{ matrix.scenario }}
+        env:
+          MOLECULE_DEBUG: "1"

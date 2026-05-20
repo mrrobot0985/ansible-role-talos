@@ -308,7 +308,7 @@
   ansible.builtin.set_fact:
     all_global_ipv4: >-
       {{
-        groups.all
+        (groups.talos_controlplane | default([]) + groups.talos_workers | default([]))
         | map('extract', hostvars, ['talos_facts', 'global_addresses'])
         | flatten | list
         | selectattr('family', 'equalto', 'inet4')

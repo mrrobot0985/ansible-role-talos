@@ -1,0 +1,10 @@
+---
+- name: Destroy
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Tear down Vagrant cluster
+      ansible.builtin.shell: make flush
+      args:
+        chdir: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"
+      failed_when: false

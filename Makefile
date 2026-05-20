@@ -84,4 +84,8 @@ flush: clean
 	@sg libvirt -c '$(FLUSH)'
 	@echo "[+] Done."
 
+molecule-test:
+	molecule test -s default
+	molecule test -s ha
+
 .DEFAULT_GOAL := help

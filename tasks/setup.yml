@@ -1,6 +1,13 @@
 ---
 # localhost setup – tools & dirs (final, actually minimal)
 
+- name: Skip hosts without ansible_host
+  ansible.builtin.meta: end_host
+  when:
+    - ansible_host is not defined or ansible_host | length == 0
+  delegate_to: localhost
+  tags: setup
+
 - name: Set talos_ip with proper fallback
   ansible.builtin.set_fact:
     talos_ip: "{{ hostvars[inventory_hostname]['talos_ip'] | default(hostvars[inventory_hostname]['ansible_host']) }}"

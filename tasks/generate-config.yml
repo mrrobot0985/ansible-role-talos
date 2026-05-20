@@ -48,7 +48,9 @@
     --with-secrets {{ talos_config_dir }}/config/secrets/secrets.yaml
   args:
     creates: "{{ talos_config_dir }}/config/base/controlplane.yaml"
-  when: not base_stat.stat.exists
+  when:
+    - not base_stat.stat.exists
+    - not (talos_force_generate | default(false) | bool)
   run_once: true
   delegate_to: localhost
   tags: config

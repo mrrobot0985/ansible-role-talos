@@ -1,0 +1,20 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: default
+platforms:
+  - name: talos-cluster
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | dirname }}:{{ lookup('env', 'ANSIBLE_ROLES_PATH') }}"
+scenario:
+  name: ha
+  test_sequence:
+    - dependency
+    - destroy
+    - create
+    - converge
+    - verify
+    - destroy

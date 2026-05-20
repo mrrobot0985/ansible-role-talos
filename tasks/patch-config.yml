@@ -25,6 +25,14 @@
   delegate_to: localhost
   tags: [patch]
 
+- name: Remove stale generated config when force_generate is set
+  ansible.builtin.file:
+    path: "{{ talos_config_dir }}/generated/{{ inventory_hostname }}.yaml"
+    state: absent
+  when: talos_force_generate | default(false) | bool
+  delegate_to: localhost
+  tags: [patch]
+
 - name: Apply patch to base config (handle multi-document YAML)
   ansible.builtin.shell: |
     set -eu

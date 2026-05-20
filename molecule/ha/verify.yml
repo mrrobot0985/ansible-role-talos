@@ -1,0 +1,123 @@
+---
+- name: Verify
+  hosts: localhost
+  gather_facts: false
+  vars:
+    project_dir: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"
+    kubeconfig: "{{ project_dir }}/.talos/kubeconfig"
+    talosconfig: "{{ project_dir }}/.talos/config/base/talosconfig"
+  tasks:
+    - name: Load scenario metadata
+      ansible.builtin.include_vars:
+        file: "{{ lookup('env', 'MOLECULE_EPHEMERAL_DIRECTORY') }}/scenario_vars.yml"
+
+    - name: Load Vagrant inventory
+      ansible.builtin.include_vars:
+        file: "{{ project_dir }}/.vagrant/inventory.yml"
+        name: vagrant_inventory
+
+    - name: Get first control-plane IP
+      ansible.builtin.set_fact:
+        _cp_ip: >-
+          {{-
+            vagrant_inventory.all.children.talos_controlplane.hosts
+            | dict2items | map(attribute='value.ansible_host') | first
+          }}
+
+    - name: Wait for Kubernetes API
+      ansible.builtin.command: "kubectl --kubeconfig {{ kubeconfig }} get nodes"
+      register: api_ready
+      retries: 30
+      delay: 10
+      until: api_ready.rc == 0
+      changed_when: false
+
+    - name: Get nodes
+      ansible.builtin.command: "kubectl --kubeconfig {{ kubeconfig }} get nodes -o json"
+      register: nodes_json
+      changed_when: false
+
+    - name: Parse node count
+      ansible.builtin.set_fact:
+        _node_count: "{{ (nodes_json.stdout | from_json)['items'] | length }}"
+
+    - name: Assert total node count
+      ansible.builtin.assert:
+        that:
+          - _node_count | int == expected_cp | int + expected_workers | int
+        fail_msg: "Expected {{ expected_cp | int + expected_workers | int }} nodes, got {{ _node_count }}"
+
+    - name: Parse Ready status
+      ansible.builtin.set_fact:
+        _ready_list: >-
+          {{-
+            (nodes_json.stdout | from_json)['items']
+            | map(attribute='status.conditions') | flatten
+            | selectattr('type', 'equalto', 'Ready')
+            | map(attribute='status') | list
+          }}
+
+    - name: Assert all nodes are Ready
+      ansible.builtin.assert:
+        that:
+          - "'True' in (_ready_list | join(' '))"
+        fail_msg: "Not all nodes are Ready"
+
+    - name: Count control-plane nodes
+      ansible.builtin.set_fact:
+        _cp_ready: >-
+          {{-
+            (nodes_json.stdout | from_json)['items']
+            | selectattr('metadata.labels', 'defined')
+            | selectattr('metadata.labels', 'search',
+              'node-role.kubernetes.io/control-plane')
+            | list | length
+          }}
+
+    - name: Assert control-plane count
+      ansible.builtin.assert:
+        that:
+          - _cp_ready | int == expected_cp | int
+        fail_msg: "Expected {{ expected_cp }} control-plane nodes, got {{ _cp_ready }}"
+
+    - name: Count worker nodes
+      ansible.builtin.set_fact:
+        _worker_ready: >-
+          {{-
+            (nodes_json.stdout | from_json)['items']
+            | selectattr('metadata.labels', 'defined')
+            | rejectattr('metadata.labels', 'search',
+              'node-role.kubernetes.io/control-plane')
+            | list | length
+          }}
+
+    - name: Assert worker count
+      ansible.builtin.assert:
+        that:
+          - _worker_ready | int == expected_workers | int
+        fail_msg: "Expected {{ expected_workers }} worker nodes, got {{ _worker_ready }}"
+
+    - name: Check etcd members
+      ansible.builtin.shell: |
+        talosctl --talosconfig "{{ talosconfig }}" \
+          etcd members --nodes {{ _cp_ip }} 2>/dev/null | \
+          awk 'NR>1 && NF {count++} END {print count+0}'
+      register: etcd_count
+      changed_when: false
+
+    - name: Assert etcd quorum
+      ansible.builtin.assert:
+        that:
+          - etcd_count.stdout | int == expected_cp | int
+        fail_msg: "Expected {{ expected_cp }} etcd members, got {{ etcd_count.stdout }}"
+
+    - name: Verify generated artifacts exist
+      ansible.builtin.stat:
+        path: "{{ project_dir }}/.talos/config/base/controlplane.yaml"
+      register: cp_config
+
+    - name: Assert controlplane config exists
+      ansible.builtin.assert:
+        that:
+          - cp_config.stat.exists
+        fail_msg: "Controlplane config not generated"

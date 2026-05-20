@@ -1,7 +1,7 @@
 ---
 # Requires vagrant environment with pre-booted Talos Nodes
 - name: BrainXio Talos
-  hosts: all
+  hosts: talos_controlplane:talos_workers
   connection: local
   gather_facts: false
   roles:
@@ -11,3 +11,4 @@
         talos_apply_dry_run: false
         talos_enable_vip: false
         talos_force_generate: true
+        talos_config_dir: "{{ playbook_dir | dirname }}/.talos"
