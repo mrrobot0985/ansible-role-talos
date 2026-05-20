@@ -345,30 +345,6 @@
   tags: [bootstrap, docs, cluster_report]
   when: talos_generate_docs | bool
 
-- name: Align tables in cluster documentation
-  ansible.builtin.set_fact:
-    _aligned_doc: "{{ lookup('file', item) | talos_markdown_align }}"
-  delegate_to: localhost
-  run_once: true
-  loop:
-    - "{{ talos_docs_dir }}/docs/cluster.md"
-    - "{{ talos_docs_dir }}/docs/index.md"
-  tags: [bootstrap, docs, cluster_report]
-  when: talos_generate_docs | bool
-
-- name: Rewrite aligned cluster documentation
-  ansible.builtin.copy:
-    content: "{{ _aligned_doc }}"
-    dest: "{{ item }}"
-    mode: '0644'
-  delegate_to: localhost
-  run_once: true
-  loop:
-    - "{{ talos_docs_dir }}/docs/cluster.md"
-    - "{{ talos_docs_dir }}/docs/index.md"
-  tags: [bootstrap, docs, cluster_report]
-  when: talos_generate_docs | bool
-
 - name: Generate MkDocs configuration
   ansible.builtin.template:
     src: docs_mkdocs.yml.j2

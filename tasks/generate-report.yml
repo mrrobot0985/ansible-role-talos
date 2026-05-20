@@ -66,19 +66,3 @@
   delegate_to: localhost
   tags: [facts, docs, node_report]
   when: talos_generate_docs | bool
-
-- name: Align tables in node documentation
-  ansible.builtin.set_fact:
-    _aligned_node_doc: "{{ lookup('file', talos_docs_dir + '/docs/nodes/' + inventory_hostname + '.md') | talos_markdown_align }}"
-  delegate_to: localhost
-  tags: [facts, docs, node_report]
-  when: talos_generate_docs | bool
-
-- name: Rewrite aligned node documentation
-  ansible.builtin.copy:
-    content: "{{ _aligned_node_doc }}"
-    dest: "{{ talos_docs_dir }}/docs/nodes/{{ inventory_hostname }}.md"
-    mode: '0644'
-  delegate_to: localhost
-  tags: [facts, docs, node_report]
-  when: talos_generate_docs | bool

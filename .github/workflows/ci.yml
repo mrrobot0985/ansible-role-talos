@@ -32,10 +32,13 @@ jobs:
         run: ansible-lint
 
       - name: Run black (check only)
-        run: black --check library/
+        run: black --check filter_plugins/ tests/
 
       - name: Run flake8
-        run: flake8 library/
+        run: flake8 filter_plugins/ tests/
+
+      - name: Run filter unit tests
+        run: PYTHONPATH=${PWD}:$PYTHONPATH pytest tests/test_filters.py -v
 
       - name: Run markdownlint
         run: |
@@ -65,7 +68,6 @@ jobs:
               talos_controlplane:
                 hosts:
                   cp-1:
-                    ansible_connection: local
                     talos_ip: 192.168.121.100
                     node_type: controlplane
             vars:

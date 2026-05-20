@@ -59,19 +59,6 @@
   become: true
   tags: [setup]
 
-- import_tasks: install-talosctl.yml
+- import_tasks: install-tools.yml
   run_once: true
-  tags: [setup, talosctl]
-
-- import_tasks: install-kubectl.yml
-  run_once: true
-  tags: [setup, kubectl]
-
-- import_tasks: install-yq.yml
-  run_once: true
-  tags: [setup, yq]
-
-- import_tasks: install-mkdocs.yml
-  run_once: true
-  tags: [setup, docs, mkdocs]
-  when: talos_generate_docs | bool
+  tags: [setup, talosctl, kubectl, yq, docs, mkdocs]

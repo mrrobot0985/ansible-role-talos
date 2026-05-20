@@ -5,7 +5,6 @@ import pytest
 from filter_plugins.talos_vip import FilterModule as VipModule
 from filter_plugins.talos_patch import FilterModule as PatchModule
 from filter_plugins.talos_node_type import FilterModule as NodeTypeModule
-from filter_plugins.talos_markdown import FilterModule as MarkdownModule
 from filter_plugins.talos_parse import FilterModule as ParseModule
 
 
@@ -180,31 +179,6 @@ class TestTalosNodeType:
     def test_unknown(self, f):
         groups = {"talos_controlplane": [], "talos_workers": []}
         assert f("node-1", groups) == "unknown"
-
-
-class TestTalosMarkdownAlign:
-    @pytest.fixture
-    def f(self):
-        return MarkdownModule().talos_markdown_align
-
-    def test_aligns_simple_table(self, f):
-        text = "| a | b |\n|---|---|\n| x | y |\n"
-        result = f(text)
-        assert "| a   | b   |" in result
-
-    def test_preserves_non_table(self, f):
-        text = "Hello world\n"
-        assert f(text) == "Hello world\n"
-
-    def test_empty_table(self, f):
-        text = "| a | b |\n|---|---|\n"
-        result = f(text)
-        assert "| a   | b   |" in result
-
-    def test_trailing_newline(self, f):
-        text = "| a | b |\n|---|---|\n| x | y |"
-        result = f(text)
-        assert result.endswith("\n")
 
 
 class TestTalosParseResource:

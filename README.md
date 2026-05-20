@@ -26,6 +26,12 @@ hosts need only `ansible_host` (and optionally `talos_ip`); `ansible_connection:
 local` is not required on hosts. This is an intentional design choice for Talos
 automation, not a workaround.
 
+## Limitations
+
+- **Smart disk selection** is heuristic-based (smallest non-removable, writable disk ≥4 GB). It may fail on exotic hardware (RAID, multipath, or very small NVMe partitions). Review `.talos/reports/` when in doubt.
+- **No Molecule tests yet** — integration coverage relies on Vagrant VMs or real Talos nodes. CI validates filter unit tests and dry-run config generation only.
+- **IPv6-only networks are not supported** — VIP calculation and endpoint discovery require at least one routable IPv4 address per node.
+
 ## Requirements
 
 - Nodes booted into Talos ISO (maintenance mode, port `50000` reachable)

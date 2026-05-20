@@ -1,0 +1,187 @@
+---
+# Install required and optional tooling on the Ansible control node
+
+# ──────────────────────────────────────────────────────────────
+# talosctl
+# ──────────────────────────────────────────────────────────────
+- name: Download talosctl checksums
+  ansible.builtin.get_url:
+    url: >-
+      https://github.com/siderolabs/talos/releases/download/{{ talosctl_version }}/sha256sum.txt
+    dest: /tmp/talosctl-sha256sum.txt
+    mode: '0644'
+  tags: [setup, talosctl]
+
+- name: Extract talosctl checksum
+  ansible.builtin.set_fact:
+    _talosctl_checksum: >-
+      {{
+        lookup('file', '/tmp/talosctl-sha256sum.txt')
+        | regex_search('^([a-f0-9]{64})\s+.*talosctl-linux-' ~ _talosctl_arch ~ '$', '\1')
+        | first
+        | default('')
+      }}
+  vars:
+    _talosctl_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+  tags: [setup, talosctl]
+
+- name: Fail if talosctl checksum not found
+  ansible.builtin.fail:
+    msg: "Could not find SHA256 checksum for talosctl-linux-{{ _talosctl_arch }}"
+  when: _talosctl_checksum | length == 0
+  tags: [setup, talosctl]
+
+- name: Install talosctl
+  ansible.builtin.get_url:
+    url: >-
+      https://github.com/siderolabs/talos/releases/download/{{ talosctl_version }}/talosctl-linux-{{ _talosctl_arch }}
+    dest: /usr/local/bin/talosctl
+    owner: root
+    group: root
+    mode: '0755'
+    checksum: "sha256:{{ _talosctl_checksum }}"
+  become: true
+  tags: [setup, talosctl]
+
+- name: Verify talosctl
+  ansible.builtin.command: talosctl version --client
+  changed_when: false
+  tags: [setup, talosctl]
+
+# ──────────────────────────────────────────────────────────────
+# kubectl
+# ──────────────────────────────────────────────────────────────
+- name: Get latest stable kubectl version
+  ansible.builtin.uri:
+    url: https://dl.k8s.io/release/stable.txt
+    return_content: yes
+  register: kubectl_stable_version
+  tags: [setup, kubectl]
+
+- name: Set kubectl version fact
+  ansible.builtin.set_fact:
+    kubectl_version: "{{ kubectl_stable_version.content | trim }}"
+  tags: [setup, kubectl]
+
+- name: Download kubectl binary (amd64)
+  ansible.builtin.get_url:
+    url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+    dest: /tmp/kubectl
+    mode: '0755'
+    checksum: "sha256:https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl.sha256"
+  when: ansible_architecture == "x86_64"
+  tags: [setup, kubectl]
+
+- name: Download kubectl binary (arm64)
+  ansible.builtin.get_url:
+    url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/arm64/kubectl"
+    dest: /tmp/kubectl
+    mode: '0755'
+    checksum: "sha256:https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/arm64/kubectl.sha256"
+  when: ansible_architecture == "aarch64"
+  tags: [setup, kubectl]
+
+- name: Install kubectl to /usr/local/bin
+  ansible.builtin.copy:
+    src: /tmp/kubectl
+    dest: /usr/local/bin/kubectl
+    owner: root
+    group: root
+    mode: '0755'
+    remote_src: yes
+  become: yes
+  tags: [setup, kubectl]
+
+- name: Clean up downloaded binary
+  ansible.builtin.file:
+    path: /tmp/kubectl
+    state: absent
+  tags: [setup, kubectl]
+
+- name: Verify kubectl installation
+  ansible.builtin.command: kubectl version --client --output=yaml
+  changed_when: false
+  tags: [setup, kubectl]
+
+- name: Enable bash completion for kubectl
+  ansible.builtin.blockinfile:
+    path: /etc/bash.bashrc
+    marker: "# {mark} ANSIBLE MANAGED KUBECTL COMPLETION"
+    block: |
+      source <(kubectl completion bash)
+    create: yes
+    mode: '0644'
+  become: yes
+  tags: [setup, kubectl]
+
+# ──────────────────────────────────────────────────────────────
+# yq
+# ──────────────────────────────────────────────────────────────
+- name: Download yq checksums
+  ansible.builtin.get_url:
+    url: >-
+      https://github.com/mikefarah/yq/releases/download/{{ yq_version }}/checksums
+    dest: /tmp/yq-checksums.txt
+    mode: '0644'
+  tags: [setup, yq]
+
+- name: Extract yq checksum
+  ansible.builtin.set_fact:
+    _yq_checksum: >-
+      {{
+        lookup('file', '/tmp/yq-checksums.txt')
+        | regex_search('^([a-f0-9]{64})\s+.*yq_' ~ ansible_system | lower ~ '_' ~ _yq_arch ~ '$', '\1')
+        | first
+        | default('')
+      }}
+  vars:
+    _yq_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}"
+  tags: [setup, yq]
+
+- name: Fail if yq checksum not found
+  ansible.builtin.fail:
+    msg: "Could not find SHA256 checksum for yq"
+  when: _yq_checksum | length == 0
+  tags: [setup, yq]
+
+- name: Install yq
+  ansible.builtin.get_url:
+    url: >-
+      https://github.com/mikefarah/yq/releases/download/{{ yq_version }}/yq_{{ ansible_system | lower }}_{{ _yq_arch }}
+    dest: /usr/local/bin/yq
+    owner: root
+    group: root
+    mode: '0755'
+    checksum: "sha256:{{ _yq_checksum }}"
+  vars:
+    _yq_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}"
+  become: true
+  tags: [setup, yq]
+
+- name: Verify yq
+  ansible.builtin.command: yq --version
+  changed_when: false
+  tags: [setup, yq]
+
+# ──────────────────────────────────────────────────────────────
+# mkdocs-material (optional, only when docs generation enabled)
+# ──────────────────────────────────────────────────────────────
+- name: Check if mkdocs is available
+  ansible.builtin.command: mkdocs --version
+  changed_when: false
+  ignore_errors: true
+  register: _mkdocs_check
+  tags: [setup, docs, mkdocs]
+
+- name: Install mkdocs-material via pip
+  ansible.builtin.pip:
+    name: mkdocs-material
+    state: present
+  become: true
+  when: _mkdocs_check.rc != 0
+  tags: [setup, docs, mkdocs]
+
+- name: Verify mkdocs
+  ansible.builtin.command: mkdocs --version
+  changed_when: false
+  tags: [setup, docs, mkdocs]
