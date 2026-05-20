@@ -1,0 +1,202 @@
+---
+argument_specs:
+  main:
+    short_description: BrainXio Talos Linux cluster deployment role.
+    description:
+      - Production-grade, zero-touch deployment of Talos Linux Kubernetes clusters.
+      - Full lifecycle automation including secrets generation, live node fact gathering,
+        smart VIP calculation, per-node JSON patching, config apply, bootstrap,
+        kubeconfig rewrite, and rich Markdown reports.
+    options:
+      # ──────────────────────────────────────────────────────────────
+      # Core cluster settings
+      # ──────────────────────────────────────────────────────────────
+      talosctl_version:
+        type: str
+        default: "v1.11.5"
+        required: false
+        description: Version of the Talos CLI to install on the Ansible control node.
+
+      cluster_name:
+        type: str
+        default: "talos-cluster"
+        required: false
+        description: Cluster name used in generated configs, reports, and kubeconfig contexts.
+
+      # ──────────────────────────────────────────────────────────────
+      # Networking and API endpoint
+      # ──────────────────────────────────────────────────────────────
+      talos_vip_rule:
+        type: str
+        default: "-1"
+        required: false
+        description:
+          - VIP octet selection rule.
+          - Use -1 to calculate VIP one octet below the lowest node IP.
+          - Use +1 to calculate VIP one octet above the highest node IP.
+          - Any other value is treated as an explicit final octet for the VIP.
+
+      cp_endpoint:
+        type: str
+        default: "https://{{ hostvars[groups.talos_controlplane[0]].talos_ip }}:6443"
+        required: false
+        description: Kubernetes API endpoint URL passed to talosctl gen config.
+
+      talos_ip:
+        type: str
+        default: "{{ hostvars[inventory_hostname]['talos_ip'] | default(hostvars[inventory_hostname]['ansible_host']) }}"
+        required: false
+        description:
+          - IP address used to reach the Talos node via talosctl.
+          - Defaults to the inventory talos_ip variable, falling back to ansible_host.
+
+      cluster_dns_domain:
+        type: str
+        default: "cluster.local"
+        required: false
+        description: In-cluster DNS search domain.
+
+      cluster_dns_servers:
+        type: list
+        elements: str
+        default: []
+        required: false
+        description: List of upstream DNS server IP addresses for the cluster.
+
+      # ──────────────────────────────────────────────────────────────
+      # Node customization
+      # ──────────────────────────────────────────────────────────────
+      talos_extensions:
+        type: list
+        elements: str
+        default: []
+        required: false
+        description:
+          - List of Talos system extensions to install.
+          - Examples include intel-ucode and qemu-guest-agent.
+
+      talos_kernel_args:
+        type: list
+        elements: str
+        default: []
+        required: false
+        description:
+          - Extra kernel arguments to append during machine config generation.
+          - Examples include console=ttyS0 and talos.platform=metal.
+
+      cluster_ntp_servers:
+        type: list
+        elements: str
+        default: []
+        required: false
+        description: List of NTP servers for cluster time synchronization.
+
+      control_plane_workloads:
+        type: bool
+        default: false
+        required: false
+        description:
+          - When true, removes the NoSchedule taint from control plane nodes
+            so user workloads can be scheduled on them.
+
+      enable_essentials:
+        type: bool
+        default: false
+        required: false
+        description:
+          - When true, installs essential cluster addons such as metrics-server
+            and local-path provisioner during bootstrap.
+
+      # ──────────────────────────────────────────────────────────────
+      # Runtime behavior
+      # ──────────────────────────────────────────────────────────────
+      talos_force_generate:
+        type: bool
+        default: false
+        required: false
+        description:
+          - When true, forces re-generation of secrets and base configs
+            even if they already exist on disk.
+
+      talos_apply_dry_run:
+        type: bool
+        default: true
+        required: false
+        description:
+          - When true, the role generates and writes configs to disk
+            but does not apply them to nodes. Set to false for actual deployment.
+
+      bootstrap_timeout:
+        type: int
+        default: 1200
+        required: false
+        description: Maximum seconds to wait for all nodes to become Ready during bootstrap.
+
+      report_timeout:
+        type: int
+        default: 300
+        required: false
+        description: Maximum seconds to wait for pods and API resources during report generation.
+
+      talos_config_dir:
+        type: str
+        default: "{{ inventory_dir | default(playbook_dir) }}/.talos"
+        required: false
+        description: Root directory for all generated configs, patches, secrets, and reports.
+
+      talos_docs_dir:
+        type: str
+        default: "{{ talos_config_dir }}/generated"
+        required: false
+        description: Directory where generated documentation and reports are written.
+
+      # ──────────────────────────────────────────────────────────────
+      # Documentation generation
+      # ──────────────────────────────────────────────────────────────
+      talos_generate_docs:
+        type: bool
+        default: false
+        required: false
+        description: When false, skips MkDocs and data output generation.
+
+      talos_docs_format:
+        type: str
+        default: "mkdocs"
+        required: false
+        description: Documentation output format. Currently only mkdocs is supported.
+
+      # ──────────────────────────────────────────────────────────────
+      # Tool versions
+      # ──────────────────────────────────────────────────────────────
+      yq_version:
+        type: str
+        default: "v4.48.2"
+        required: false
+        description: Version of the yq binary to install on the Ansible control node.
+
+      # ──────────────────────────────────────────────────────────────
+      # Derived internal paths (vars/main.yml)
+      # ──────────────────────────────────────────────────────────────
+      talosconfig_path:
+        type: str
+        default: "{{ talos_config_dir }}/talosconfig"
+        required: false
+        description: Path to the generated talosconfig file. Derived from talos_config_dir.
+
+      talos_secrets_path:
+        type: str
+        default: "{{ talos_config_dir }}/config/secrets/secrets.yaml"
+        required: false
+        description: Path to the generated cluster secrets bundle. Derived from talos_config_dir.
+
+      talos_base_cp_path:
+        type: str
+        default: "{{ talos_config_dir }}/config/base/controlplane.yaml"
+        required: false
+        description: Path to the base control plane machine config. Derived from talos_config_dir.
+
+      talos_base_worker_path:
+        type: str
+        default: "{{ talos_config_dir }}/config/base/worker.yaml"
+        required: false
+        description: Path to the base worker machine config. Derived from talos_config_dir.

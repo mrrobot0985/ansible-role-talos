@@ -17,6 +17,15 @@
 - **Full Bootstrap Automation** — Generates secrets, applies patches, reboots, bootstraps etcd, rewrites kubeconfig to VIP, waits for nodes Ready.
 - **Single-Node & HA Ready** — Correctly enables `allowSchedulingOnControlPlanes` for standalone clusters.
 
+## Architecture Note: Localhost Delegation
+
+This role delegates all `talosctl` and `kubectl` operations to `localhost`.
+Talos is immutable with no SSH or package manager; the Ansible control node
+generates configs and calls `talosctl` directly against node IPs. Inventory
+hosts need only `ansible_host` (and optionally `talos_ip`); `ansible_connection:
+local` is not required on hosts. This is an intentional design choice for Talos
+automation, not a workaround.
+
 ## Requirements
 
 - Nodes booted into Talos ISO (maintenance mode, port `50000` reachable)

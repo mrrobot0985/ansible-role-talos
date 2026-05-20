@@ -65,7 +65,12 @@ class TestTalosVip:
             # With -1 rule on real IPs: lowest real = 11, candidate = 10
             # 10 is in shared_bare_ips → conflict
             f(
-                ["192.168.1.10/24", "192.168.1.11/24", "192.168.1.10/24", "192.168.1.10/24"],
+                [
+                    "192.168.1.10/24",
+                    "192.168.1.11/24",
+                    "192.168.1.10/24",
+                    "192.168.1.10/24",
+                ],
                 vip_rule="-1",
                 total_nodes=3,
                 control_plane_count=2,
@@ -120,13 +125,17 @@ class TestTalosPatch:
 
     def test_single_node_scheduling(self, f):
         facts = {}
-        patch = f(facts, "cp-1", is_controlplane=True, total_controlplanes=1, total_workers=0)
+        patch = f(
+            facts, "cp-1", is_controlplane=True, total_controlplanes=1, total_workers=0
+        )
         paths = [op["path"] for op in patch]
         assert "/cluster/allowSchedulingOnControlPlanes" in paths
 
     def test_multi_node_no_scheduling(self, f):
         facts = {}
-        patch = f(facts, "cp-1", is_controlplane=True, total_controlplanes=2, total_workers=1)
+        patch = f(
+            facts, "cp-1", is_controlplane=True, total_controlplanes=2, total_workers=1
+        )
         paths = [op["path"] for op in patch]
         assert "/cluster/allowSchedulingOnControlPlanes" not in paths
 
@@ -139,7 +148,13 @@ class TestTalosPatch:
 
     def test_dns_ntp_when_provided(self, f):
         facts = {}
-        patch = f(facts, "cp-1", is_controlplane=False, cluster_dns_servers=["8.8.8.8"], cluster_ntp_servers=["time.google.com"])
+        patch = f(
+            facts,
+            "cp-1",
+            is_controlplane=False,
+            cluster_dns_servers=["8.8.8.8"],
+            cluster_ntp_servers=["time.google.com"],
+        )
         paths = [op["path"] for op in patch]
         assert "/machine/network/nameservers" in paths
         assert "/machine/time/servers" in paths
@@ -203,7 +218,10 @@ class TestTalosParseResource:
         assert result["spec"]["version"] == "v1.0"
 
     def test_ndjson_dict(self, f):
-        raw = '{"metadata":{"id":"disk1"},"spec":{"size":100}}\n{"metadata":{"id":"disk2"},"spec":{"size":200}}'
+        raw = (
+            '{"metadata":{"id":"disk1"},"spec":{"size":100}}\n'
+            '{"metadata":{"id":"disk2"},"spec":{"size":200}}'
+        )
         result = f(raw, "ndjson_dict")
         assert "disk1" in result
         assert result["disk2"]["spec"]["size"] == 200
@@ -220,7 +238,11 @@ class TestTalosParseResource:
         assert f("", "ndjson_list") == []
 
     def test_multiline_json(self, f):
-        raw = '{\n  "metadata": {\n    "id": "item1"\n  },\n  "spec": {\n    "val": 1\n  }\n}\n{"metadata":{"id":"item2"},"spec":{"val":2}}'
+        raw = (
+            '{\n  "metadata": {\n    "id": "item1"\n  },\n'
+            '  "spec": {\n    "val": 1\n  }\n}\n'
+            '{"metadata":{"id":"item2"},"spec":{"val":2}}'
+        )
         result = f(raw, "ndjson_dict")
         assert "item1" in result
         assert "item2" in result

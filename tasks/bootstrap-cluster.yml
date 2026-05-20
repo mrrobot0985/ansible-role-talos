@@ -157,6 +157,7 @@
   changed_when: false
   ignore_errors: true
   tags: cluster_report
+  when: talos_generate_docs | bool
   register: _kube_api_check
 
 - name: Gather cluster node info
@@ -168,6 +169,7 @@
   changed_when: false
   ignore_errors: true
   tags: cluster_report
+  when: talos_generate_docs | bool
   register: _kube_nodes_raw
 
 - name: Gather system pods
@@ -179,6 +181,7 @@
   changed_when: false
   ignore_errors: true
   tags: cluster_report
+  when: talos_generate_docs | bool
   register: _kube_pods_raw
 
 - name: Extract pod names for CNI detection
@@ -191,6 +194,7 @@
   delegate_to: localhost
   run_once: true
   tags: cluster_report
+  when: talos_generate_docs | bool
 
 - name: Detect CNI from running pods
   ansible.builtin.set_fact:
@@ -205,6 +209,7 @@
   delegate_to: localhost
   run_once: true
   tags: cluster_report
+  when: talos_generate_docs | bool
 
 - name: Extract node list from kubectl output
   ansible.builtin.set_fact:
@@ -238,6 +243,7 @@
   delegate_to: localhost
   run_once: true
   tags: cluster_report
+  when: talos_generate_docs | bool
 
 - name: Extract system pod list from kubectl output
   ansible.builtin.set_fact:
@@ -258,6 +264,7 @@
   delegate_to: localhost
   run_once: true
   tags: cluster_report
+  when: talos_generate_docs | bool
 
 - name: Build cluster report
   ansible.builtin.set_fact:
@@ -271,6 +278,7 @@
   delegate_to: localhost
   run_once: true
   tags: cluster_report
+  when: talos_generate_docs | bool
 
 # ──────────────────────────────────────────────────────────────
 # Generate documentation

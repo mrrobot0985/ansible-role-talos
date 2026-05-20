@@ -40,7 +40,7 @@ talos_docs_dir: "{{ talos_config_dir }}/generated"
 # ──────────────────────────────────────────────────────────────
 # Documentation generation
 # ──────────────────────────────────────────────────────────────
-talos_generate_docs: true                # Set false to skip MkDocs/data output
+talos_generate_docs: false                # Set false to skip MkDocs/data output
 talos_docs_format: "mkdocs"             # Future-proof: only mkdocs supported today
 
 # ──────────────────────────────────────────────────────────────

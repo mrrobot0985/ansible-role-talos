@@ -74,3 +74,4 @@
 - import_tasks: install-mkdocs.yml
   run_once: true
   tags: [setup, docs, mkdocs]
+  when: talos_generate_docs | bool
