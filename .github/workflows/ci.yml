@@ -37,6 +37,11 @@ jobs:
       - name: Run flake8
         run: flake8 library/ filter_plugins/
 
+      - name: Run markdownlint
+        run: |
+          npm install -g markdownlint-cli
+          markdownlint docs/ README.md TESTING.md CONTRIBUTING.md
+
   dry-run:
     name: Dry-Run Config Generation
     needs: lint
