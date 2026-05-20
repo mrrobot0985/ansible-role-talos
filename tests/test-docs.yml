@@ -89,6 +89,55 @@
           restarts: 0
           node: "cp-1"
       component_statuses: []
+    node_doc_data:
+      device:
+        name: "{{ inventory_hostname }}"
+        site: "{{ cluster_name }}"
+        role: "{{ 'controlplane' if inventory_hostname in groups['talos_controlplane'] else 'worker' }}"
+        platform: "Talos Linux {{ talos_facts.version | default('unknown') }}"
+        status: "{{ 'active' if talos_facts.machinestatus_ready | default(false) else 'planned' }}"
+        serial: ""
+        management_ip: "{{ talos_ip | default('') }}"
+        interfaces: "{{ talos_facts.all_interfaces | default([]) }}"
+        disks: "{{ talos_facts.usable_disks | default([]) }}"
+        install_disk: "{{ talos_facts.install_disk | default('') }}"
+        kernel_parameters:
+          - parameter: "console"
+            current: "ttyS0"
+            default: "tty0"
+        customizations:
+          extra_kernel_args:
+            - "console=ttyS0"
+          system_extensions:
+            - "qemu-guest-agent"
+          ntp_servers:
+            - "time.google.com"
+          dns_domain: "{{ cluster_dns_domain }}"
+          dns_servers:
+            - "8.8.8.8"
+        machine_status:
+          stage: "{{ talos_facts.machinestatus_stage | default('unknown') }}"
+          ready: "{{ talos_facts.machinestatus_ready | default(false) }}"
+          booted_with_cni: "{{ talos_network_global.has_cni | default(false) }}"
+    cluster_doc_data:
+      site:
+        name: "{{ cluster_name }}"
+        status: "{{ 'active' if (_cluster_report.kube_api_reachable | default(false)) else 'planned' }}"
+        vip: "{{ talos_vip | default('') }}"
+        subnet: "{{ talos_network_global.cluster_subnet | default('') }}"
+        kubernetes_api: "https://{{ talos_vip | split('/') | first | default('192.168.1.11') }}:6443"
+        cni: "{{ cni | default('cilium') }}"
+        talos_version: "{{ talos_facts.version | default('unknown') }}"
+      devices:
+        - "cp-1"
+        - "cp-2"
+        - "worker-1"
+      nodes: "{{ _cluster_report.nodes | default([]) }}"
+      control_planes:
+        - "cp-1"
+        - "cp-2"
+      workers:
+        - "worker-1"
     ansible_date_time:
       iso8601: "2026-05-20T12:00:00+00:00"
 
@@ -125,44 +174,17 @@
       delegate_to: localhost
 
     - name: Align tables in node markdown
-      ansible.builtin.shell: |
-        python3 -c '
-        import sys
-        def align(path):
-            with open(path) as f: lines = f.read().splitlines()
-            out, table = [], []
-            for line in lines:
-                s = line.strip()
-                if s.startswith("|") and s.endswith("|"):
-                    table.append(s)
-                    continue
-                if table:
-                    rows = [[c.strip() for c in r[1:-1].split("|")] for r in table]
-                    cols = max(len(r) for r in rows)
-                    w = [0] * cols
-                    for r in rows:
-                        for i, c in enumerate(r):
-                            w[i] = max(w[i], len(c))
-                    for r in rows:
-                        cells = [" " + (r[i] if i < len(r) else "").ljust(w[i]) + " " for i in range(cols)]
-                        out.append("|" + "|".join(cells) + "|")
-                    table = []
-                out.append(line)
-            if table:
-                rows = [[c.strip() for c in r[1:-1].split("|")] for r in table]
-                cols = max(len(r) for r in rows)
-                w = [0] * cols
-                for r in rows:
-                    for i, c in enumerate(r):
-                        w[i] = max(w[i], len(c))
-                for r in rows:
-                    cells = [" " + (r[i] if i < len(r) else "").ljust(w[i]) + " " for i in range(cols)]
-                    out.append("|" + "|".join(cells) + "|")
-            with open(path, "w") as f:
-                f.write("\n".join(out) + "\n")
-        for p in sys.argv[1:]:
-            align(p)
-        ' '{{ talos_docs_dir }}/docs/nodes/{{ inventory_hostname }}.md'
+      ansible.builtin.set_fact:
+        _aligned_node_doc: >-
+          {{ lookup('file', talos_docs_dir + '/docs/nodes/' + inventory_hostname + '.md')
+          | talos_markdown_align }}
+      delegate_to: localhost
+
+    - name: Rewrite aligned node markdown
+      ansible.builtin.copy:
+        content: "{{ _aligned_node_doc }}"
+        dest: "{{ talos_docs_dir }}/docs/nodes/{{ inventory_hostname }}.md"
+        mode: "0644"
       delegate_to: localhost
 
   post_tasks:
@@ -183,44 +205,16 @@
       run_once: true
 
     - name: Align tables in cluster markdown
-      ansible.builtin.shell: |
-        python3 -c '
-        import sys
-        def align(path):
-            with open(path) as f: lines = f.read().splitlines()
-            out, table = [], []
-            for line in lines:
-                s = line.strip()
-                if s.startswith("|") and s.endswith("|"):
-                    table.append(s)
-                    continue
-                if table:
-                    rows = [[c.strip() for c in r[1:-1].split("|")] for r in table]
-                    cols = max(len(r) for r in rows)
-                    w = [0] * cols
-                    for r in rows:
-                        for i, c in enumerate(r):
-                            w[i] = max(w[i], len(c))
-                    for r in rows:
-                        cells = [" " + (r[i] if i < len(r) else "").ljust(w[i]) + " " for i in range(cols)]
-                        out.append("|" + "|".join(cells) + "|")
-                    table = []
-                out.append(line)
-            if table:
-                rows = [[c.strip() for c in r[1:-1].split("|")] for r in table]
-                cols = max(len(r) for r in rows)
-                w = [0] * cols
-                for r in rows:
-                    for i, c in enumerate(r):
-                        w[i] = max(w[i], len(c))
-                for r in rows:
-                    cells = [" " + (r[i] if i < len(r) else "").ljust(w[i]) + " " for i in range(cols)]
-                    out.append("|" + "|".join(cells) + "|")
-            with open(path, "w") as f:
-                f.write("\n".join(out) + "\n")
-        for p in sys.argv[1:]:
-            align(p)
-        ' '{{ talos_docs_dir }}/docs/cluster.md'
+      ansible.builtin.set_fact:
+        _aligned_cluster_doc: "{{ lookup('file', talos_docs_dir + '/docs/cluster.md') | talos_markdown_align }}"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Rewrite aligned cluster markdown
+      ansible.builtin.copy:
+        content: "{{ _aligned_cluster_doc }}"
+        dest: "{{ talos_docs_dir }}/docs/cluster.md"
+        mode: "0644"
       delegate_to: localhost
       run_once: true
 
@@ -233,44 +227,16 @@
       run_once: true
 
     - name: Align tables in index markdown
-      ansible.builtin.shell: |
-        python3 -c '
-        import sys
-        def align(path):
-            with open(path) as f: lines = f.read().splitlines()
-            out, table = [], []
-            for line in lines:
-                s = line.strip()
-                if s.startswith("|") and s.endswith("|"):
-                    table.append(s)
-                    continue
-                if table:
-                    rows = [[c.strip() for c in r[1:-1].split("|")] for r in table]
-                    cols = max(len(r) for r in rows)
-                    w = [0] * cols
-                    for r in rows:
-                        for i, c in enumerate(r):
-                            w[i] = max(w[i], len(c))
-                    for r in rows:
-                        cells = [" " + (r[i] if i < len(r) else "").ljust(w[i]) + " " for i in range(cols)]
-                        out.append("|" + "|".join(cells) + "|")
-                    table = []
-                out.append(line)
-            if table:
-                rows = [[c.strip() for c in r[1:-1].split("|")] for r in table]
-                cols = max(len(r) for r in rows)
-                w = [0] * cols
-                for r in rows:
-                    for i, c in enumerate(r):
-                        w[i] = max(w[i], len(c))
-                for r in rows:
-                    cells = [" " + (r[i] if i < len(r) else "").ljust(w[i]) + " " for i in range(cols)]
-                    out.append("|" + "|".join(cells) + "|")
-            with open(path, "w") as f:
-                f.write("\n".join(out) + "\n")
-        for p in sys.argv[1:]:
-            align(p)
-        ' '{{ talos_docs_dir }}/docs/index.md'
+      ansible.builtin.set_fact:
+        _aligned_index_doc: "{{ lookup('file', talos_docs_dir + '/docs/index.md') | talos_markdown_align }}"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Rewrite aligned index markdown
+      ansible.builtin.copy:
+        content: "{{ _aligned_index_doc }}"
+        dest: "{{ talos_docs_dir }}/docs/index.md"
+        mode: "0644"
       delegate_to: localhost
       run_once: true
 

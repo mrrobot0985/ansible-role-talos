@@ -17,5 +17,5 @@
     not (talos_apply_dry_run | bool and 'dry-run' in apply_result.stderr)
   tags: [apply-config]
 
-- import_tasks: 41-wait.yml
+- import_tasks: wait-nodes.yml
   tags: [apply-config, wait]

@@ -2,18 +2,26 @@
 # ──────────────────────────────────────────────────────────────
 # Patch the node configurations
 # ──────────────────────────────────────────────────────────────
-- name: Generate per-node JSON patch
-  talos_patch_module:
-    talos_facts: "{{ talos_facts }}"
-    inventory_hostname: "{{ inventory_hostname }}"
-    is_controlplane: "{{ inventory_hostname in groups.talos_controlplane }}"
-    cluster_dns_servers: "{{ talos_cluster_dns | default([]) }}"
-    cluster_ntp_servers: "{{ talos_cluster_ntp | default([]) }}"
-    patch_dir: "{{ talos_config_dir }}/patches/nodes"
-    customization: "{{ customization | default({}) }}"
-    total_controlplanes: "{{ groups.talos_controlplane | length }}"
-    total_workers: "{{ (groups.talos_workers | default([])) | length }}"
-  register: patch_result
+- name: Build per-node JSON patch
+  ansible.builtin.set_fact:
+    _node_patch: >-
+      {{ talos_facts | talos_patch(
+        inventory_hostname,
+        inventory_hostname in groups.talos_controlplane,
+        talos_cluster_dns | default([]),
+        talos_cluster_ntp | default([]),
+        customization | default({}),
+        groups.talos_controlplane | length,
+        (groups.talos_workers | default([])) | length
+      ) }}
+  delegate_to: localhost
+  tags: [patch]
+
+- name: Write JSON patch to file
+  ansible.builtin.copy:
+    content: "{{ _node_patch | to_nice_json }}"
+    dest: "{{ talos_config_dir }}/patches/nodes/{{ inventory_hostname }}.json"
+    mode: "0644"
   delegate_to: localhost
   tags: [patch]
 
@@ -28,7 +36,7 @@
     # talosctl machineconfig patch can process it.  v1.12+ gen config
     # always outputs multi-document YAML which machineconfig patch rejects.
     yq eval 'select(document_index == 0)' "$BASE" > "$TMP"
-    talosctl machineconfig patch "$TMP" --patch @{{ patch_result.patch_file }} -o "$OUT"
+    talosctl machineconfig patch "$TMP" --patch @{{ talos_config_dir }}/patches/nodes/{{ inventory_hostname }}.json -o "$OUT"
     rm -f "$TMP"
     # Append any trailing documents (e.g. HostnameConfig) unchanged.
     EXTRA=$(yq eval 'select(document_index > 0)' "$BASE" 2>/dev/null || true)

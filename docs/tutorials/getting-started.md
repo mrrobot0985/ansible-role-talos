@@ -19,14 +19,13 @@ all:
     talos_controlplane:
       hosts:
         cp-1:
-          ansible_connection: local
-          talos_ip: 10.0.0.3
+          ansible_host: 10.0.0.3
           node_type: controlplane
   vars:
     cluster_name: mytalos
 ```
 
-Replace `talos_ip` with the actual maintenance-mode IP of each node.
+Replace `ansible_host` with the actual maintenance-mode IP of each node.
 
 ## Step 2 — Create a Playbook
 

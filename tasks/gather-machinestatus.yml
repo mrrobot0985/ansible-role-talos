@@ -22,14 +22,6 @@
   tags: [facts, machinestatus]
 
 - name: Compute node_type
-  talos_node_type:
-    all_groups: "{{ groups }}"
-    inventory_hostname: "{{ inventory_hostname }}"
-  register: _node_type
-  tags: [facts, machinestatus]
-
-- name: Apply node_type fact
   ansible.builtin.set_fact:
-    node_type: "{{ _node_type.ansible_facts.node_type }}"
-  when: _node_type.ansible_facts is defined
+    node_type: "{{ inventory_hostname | talos_node_type(groups) }}"
   tags: [facts, machinestatus]

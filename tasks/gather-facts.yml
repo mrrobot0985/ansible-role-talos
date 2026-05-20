@@ -18,14 +18,14 @@
   run_once: false
   tags: [apply-config]
 
-- import_tasks: 21-machinestatus.yml
+- import_tasks: gather-machinestatus.yml
   tags: [facts, machinestatus]
 
-- import_tasks: 22-resources.yml
+- import_tasks: gather-resources.yml
   tags: [facts, resources]
 
-- import_tasks: 23-networking.yml
+- import_tasks: gather-networking.yml
   tags: [facts, networking]
 
-- import_tasks: 24-report.yml
+- import_tasks: generate-report.yml
   tags: [facts, node_report]

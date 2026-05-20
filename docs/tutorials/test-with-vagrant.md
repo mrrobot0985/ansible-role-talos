@@ -29,7 +29,7 @@ This downloads the Talos ISO, creates libvirt domains, and generates `.vagrant/i
 cat .vagrant/inventory.yml
 ```
 
-You should see `talos_controlplane` and `talos_workers` groups with `ansible_connection: local` and a `talos_ip` per host.
+You should see `talos_controlplane` and `talos_workers` groups with an `ansible_host` per host.
 
 ## Step 3 -- Dry-Run Against the VMs
 

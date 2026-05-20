@@ -19,26 +19,21 @@ all:
     talos_controlplane:
       hosts:
         cp-1:
-          ansible_connection: local
-          talos_ip: 10.255.0.3
+          ansible_host: 10.255.0.3
           node_type: controlplane
         cp-2:
-          ansible_connection: local
-          talos_ip: 10.255.0.4
+          ansible_host: 10.255.0.4
           node_type: controlplane
         cp-3:
-          ansible_connection: local
-          talos_ip: 10.255.0.5
+          ansible_host: 10.255.0.5
           node_type: controlplane
     talos_workers:
       hosts:
         worker-1:
-          ansible_connection: local
-          talos_ip: 10.255.0.6
+          ansible_host: 10.255.0.6
           node_type: worker
         worker-2:
-          ansible_connection: local
-          talos_ip: 10.255.0.7
+          ansible_host: 10.255.0.7
           node_type: worker
   vars:
     cluster_name: ha-cluster

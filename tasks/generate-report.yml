@@ -1,0 +1,84 @@
+---
+# ──────────────────────────────────────────────────────────────
+# Node documentation
+# ──────────────────────────────────────────────────────────────
+- name: Set talos_ip
+  ansible.builtin.set_fact:
+    talos_ip: "{{ hostvars[inventory_hostname]['talos_ip'] | default(hostvars[inventory_hostname]['ansible_host']) }}"
+  tags: [facts, node_report]
+
+- name: Transform kernel params for documentation
+  ansible.builtin.set_fact:
+    _doc_kernel_params: >-
+      {{
+        _doc_kernel_params | default([]) + [
+          {'parameter': item.key, 'current': item.value.current, 'default': item.value.default}
+        ]
+      }}
+  delegate_to: localhost
+  tags: [facts, docs, node_report]
+  when: talos_generate_docs | bool
+  loop: "{{ talos_facts.changed_kernel_params | default({}) | dict2items }}"
+
+- name: Build node documentation data structure
+  ansible.builtin.set_fact:
+    node_doc_data:
+      device:
+        name: "{{ inventory_hostname }}"
+        site: "{{ cluster_name }}"
+        role: "{{ node_type }}"
+        platform: "Talos Linux {{ talos_facts.version | default('unknown') }}"
+        status: "{{ 'active' if talos_facts.machinestatus_ready | default(false) else 'planned' }}"
+        serial: ""
+        management_ip: "{{ talos_ip | default('') }}"
+        interfaces: "{{ talos_facts.all_interfaces | default([]) }}"
+        disks: "{{ talos_facts.usable_disks | default([]) }}"
+        install_disk: "{{ talos_facts.install_disk | default('') }}"
+        kernel_parameters: "{{ _doc_kernel_params | default([]) }}"
+        customizations:
+          extra_kernel_args: "{{ customization.extraKernelArgs | default([]) }}"
+          system_extensions: "{{ customization.systemExtensions.officialExtensions | default([]) }}"
+          ntp_servers: "{{ talos_facts.timeservers_list | default([]) }}"
+          dns_domain: "{{ cluster_dns_domain }}"
+          dns_servers: "{{ cluster_dns_servers | default([]) }}"
+        machine_status:
+          stage: "{{ talos_facts.machinestatus_stage | default('unknown') }}"
+          ready: "{{ talos_facts.machinestatus_ready | default(false) }}"
+          booted_with_cni: "{{ talos_network_global.has_cni | default(false) }}"
+  delegate_to: localhost
+  tags: [facts, docs, node_report]
+  when: talos_generate_docs | bool
+
+- name: Generate node documentation data
+  ansible.builtin.template:
+    src: docs_node_data.yml.j2
+    dest: "{{ talos_docs_dir }}/data/nodes/{{ inventory_hostname }}.yml"
+    mode: '0644'
+  delegate_to: localhost
+  tags: [facts, docs, node_report]
+  when: talos_generate_docs | bool
+
+- name: Generate node documentation page
+  ansible.builtin.template:
+    src: docs_node.md.j2
+    dest: "{{ talos_docs_dir }}/docs/nodes/{{ inventory_hostname }}.md"
+    mode: '0644'
+  delegate_to: localhost
+  tags: [facts, docs, node_report]
+  when: talos_generate_docs | bool
+
+- name: Align tables in node documentation
+  ansible.builtin.set_fact:
+    _aligned_node_doc: "{{ lookup('file', talos_docs_dir + '/docs/nodes/' + inventory_hostname + '.md') | talos_markdown_align }}"
+  delegate_to: localhost
+  tags: [facts, docs, node_report]
+  when: talos_generate_docs | bool
+
+- name: Rewrite aligned node documentation
+  ansible.builtin.copy:
+    content: "{{ _aligned_node_doc }}"
+    dest: "{{ talos_docs_dir }}/docs/nodes/{{ inventory_hostname }}.md"
+    mode: '0644'
+  delegate_to: localhost
+  tags: [facts, docs, node_report]
+  when: talos_generate_docs | bool

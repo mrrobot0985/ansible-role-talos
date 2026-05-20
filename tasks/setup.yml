@@ -59,18 +59,18 @@
   become: true
   tags: [setup]
 
-- import_tasks: 01-talosctl.yml
+- import_tasks: install-talosctl.yml
   run_once: true
   tags: [setup, talosctl]
 
-- import_tasks: 02-kubectl.yml
+- import_tasks: install-kubectl.yml
   run_once: true
   tags: [setup, kubectl]
 
-- import_tasks: 03-yq.yml
+- import_tasks: install-yq.yml
   run_once: true
   tags: [setup, yq]
 
-- import_tasks: 04-mkdocs.yml
+- import_tasks: install-mkdocs.yml
   run_once: true
   tags: [setup, docs, mkdocs]

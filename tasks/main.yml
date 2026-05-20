@@ -3,22 +3,22 @@
 # ──────────────────────────────────────────────────────────────
 # Main entry point
 # ──────────────────────────────────────────────────────────────
-- import_tasks: 00-setup.yml
+- import_tasks: setup.yml
   tags: setup
 
-- import_tasks: 10-config.yml
+- import_tasks: generate-config.yml
   tags: config
 
-- import_tasks: 20-facts.yml
+- import_tasks: gather-facts.yml
   tags: facts
 
-- import_tasks: 30-patch.yml
+- import_tasks: patch-config.yml
   tags: patch
 
-- import_tasks: 40-apply.yml
+- import_tasks: apply-config.yml
   tags: apply-config
 
-- import_tasks: 50-bootstrap.yml
+- import_tasks: bootstrap-cluster.yml
   tags: bootstrap
 
 - name: Cluster is READY
