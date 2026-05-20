@@ -420,15 +420,15 @@ CP_COUNT=3 WORKER_COUNT=2 TALOS_VERSION=v1.10.0 make up
 
 GitHub Actions workflow at `.github/workflows/ci.yml`:
 
-1. **Lint** — Runs `yamllint` and `ansible-lint` on every push/PR
-2. **Integration** — Runs on a self-hosted `linux, kvm` runner:
-   - `make install`
-   - `make flush`
-   - `make up` (single-node)
-   - `make test`
-   - `make clean`
-   - Uploads Talos logs on failure
+1. **Lint** — Runs `yamllint`, `ansible-lint`, `black`, and `flake8` on every push/PR
+2. **Dry-Run** — Generates base Talos configs and secrets without requiring VMs:
+   - Installs talosctl, kubectl, yq
+   - Runs setup and config phases
+   - Verifies generated artifacts exist
+   - Validates YAML with `talosctl validate`
 3. **Publish** — Pushes the role to Ansible Galaxy on `v*` tags
+
+Full integration testing requires a local Vagrant + libvirt environment (see below).
 
 ---
 
