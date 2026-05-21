@@ -1,6 +1,7 @@
 # mrrobot0985.talos
 
 [![CI](https://github.com/mrrobot0985/ansible-role-talos/actions/workflows/ci.yml/badge.svg)](https://github.com/mrrobot0985/ansible-role-talos/actions/workflows/ci.yml)
+[![Molecule](https://github.com/mrrobot0985/ansible-role-talos/actions/workflows/molecule.yml/badge.svg)](https://github.com/mrrobot0985/ansible-role-talos/actions/workflows/molecule.yml)
 [![Ansible Galaxy](https://img.shields.io/badge/galaxy-mrrobot0985.talos-blue.svg)](https://galaxy.ansible.com/mrrobot0985/talos)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Ansible](https://img.shields.io/badge/ansible-%3E%3D2.14-black.svg)](https://docs.ansible.com/ansible/latest/index.html)
