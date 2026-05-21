@@ -213,7 +213,7 @@
   ansible.builtin.set_fact:
     _pod_names: >-
       {{-
-        (_kube_pods_raw.stdout | from_json | default({})).items | default([])
+        (_kube_pods_raw.stdout | from_json | default({}))['items'] | default([])
         | map(attribute='metadata.name') | join(' ')
       }}
   delegate_to: localhost
@@ -240,7 +240,7 @@
   ansible.builtin.set_fact:
     _report_nodes: >-
       {%- set ns = namespace(nodes=[]) %}
-      {%- for item in ((_kube_nodes_raw.stdout | from_json | default({})).items | default([])) %}
+      {%- for item in ((_kube_nodes_raw.stdout | from_json | default({}))['items'] | default([])) %}
       {%-   set role = 'control-plane'
             if 'node-role.kubernetes.io/control-plane' in (item.metadata.labels | default({}))
             else 'worker' %}
@@ -274,7 +274,7 @@
   ansible.builtin.set_fact:
     _report_pods: >-
       {%- set ns = namespace(pods=[]) %}
-      {%- for item in ((_kube_pods_raw.stdout | from_json | default({})).items | default([])) %}
+      {%- for item in ((_kube_pods_raw.stdout | from_json | default({}))['items'] | default([])) %}
       {%-   set ready = item.status.containerStatuses | default([]) | map(attribute='ready') | list | count %}
       {%-   set total = item.status.containerStatuses | default([]) | length %}
       {%-   set restarts = item.status.containerStatuses | default([]) | map(attribute='restartCount') | list | sum %}

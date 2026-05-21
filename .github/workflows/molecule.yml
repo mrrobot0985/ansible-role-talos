@@ -16,7 +16,6 @@ jobs:
     name: Molecule ${{ matrix.scenario }} (Talos ${{ matrix.talos_version }})
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    needs: lint
     # Gate: skip on forks or when no self-hosted runner is available.
     # For self-hosted runs, override runs-on to [self-hosted, linux, kvm]
     if: github.repository == 'mrrobot0985/ansible-role-talos'
@@ -28,10 +27,10 @@ jobs:
         scenario: ["default", "ha"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
