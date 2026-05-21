@@ -9,7 +9,7 @@ The role executes in six strictly ordered phases via `import_tasks`:
 - Creates `.talos/` subdirectories (`config/base`, `config/secrets`, `patches/nodes`, `generated`)
 - Optionally encrypts `.talos/` with `ansible-vault`
 - Ensures `/usr/local/bin` is in `PATH`
-- Installs `talosctl`, `kubectl`, `yq`, and optionally `mkdocs-material` (all pinned or latest stable with SHA256 verification)
+- Installs `talosctl`, `kubectl`, and `yq` (all pinned or latest stable with SHA256 verification)
 
 ### 2. Config (`generate-config.yml`)
 
@@ -73,7 +73,6 @@ The role executes in six strictly ordered phases via `import_tasks`:
 - Waits for Kubernetes API to become reachable (VIP or bootstrap node)
 - Waits for all control plane nodes to report `Ready`
 - Waits for all worker nodes to report `Ready`
-- Optionally generates cluster documentation when `talos_generate_docs: true`
 
 ## Filter Plugins
 

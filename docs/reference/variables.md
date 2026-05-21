@@ -30,11 +30,7 @@ All variables can be set in `group_vars/`, `host_vars/`, or directly in the play
 | `talos_force_generate` | Force regeneration of secrets and base config | bool | `false` |
 | `talos_apply_dry_run` | Apply configs in dry-run mode (safe default) | bool | `true` |
 | `bootstrap_timeout` | Seconds to wait for nodes to become Ready | int | `1200` |
-| `report_timeout` | Seconds to wait for pods/API during reporting | int | `300` |
-| `talos_generate_docs` | Generate MkDocs documentation and reports | bool | `false` |
-| `talos_docs_format` | Documentation format (only `mkdocs` supported) | str | `mkdocs` |
 | `talos_config_dir` | Root directory for configs, patches, secrets | str | `{{ playbook_dir }}/.talos` |
-| `talos_docs_dir` | Directory for generated documentation | str | `{{ talos_config_dir }}/generated` |
 | `yq_version` | Version of `yq` to install | str | `v4.48.2` |
 
 ## Vault Encryption (Optional)

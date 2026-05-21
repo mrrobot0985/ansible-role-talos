@@ -118,21 +118,6 @@ argument_specs:
         required: false
         description: Root directory for all generated configs, patches, secrets, and reports.
 
-      talos_docs_dir:
-        type: str
-        default: "{{ talos_config_dir }}/generated"
-        required: false
-        description: Directory where generated documentation and reports are written.
-
-      # ──────────────────────────────────────────────────────────────
-      # Documentation generation
-      # ──────────────────────────────────────────────────────────────
-      talos_generate_docs:
-        type: bool
-        default: false
-        required: false
-        description: When false, skips MkDocs and data output generation.
-
       encrypt_talos_dir:
         type: bool
         default: false

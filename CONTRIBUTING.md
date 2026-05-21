@@ -107,7 +107,7 @@ make molecule-test
 
 - Filter plugins live in `filter_plugins/`
 - All new features should preserve backward compatibility when possible
-- Documentation updates (README, reports) are highly valued
+- Documentation updates (README, guides) are highly valued
 
 ## License
 

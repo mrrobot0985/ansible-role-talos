@@ -43,15 +43,7 @@ CP_COUNT=3 WORKER_COUNT=2 TALOS_VERSION=v1.11.5 make up
 
 ## File Explanations
 
-- **Vagrantfile** — Defines VMs, downloads Talos ISO, configures libvirt (nested virt, serial logs in `.vagrant/talos-logs`).
-- **scripts/install-deps.sh** — Installs packages and loads the KVM module.
-- **scripts/generate-inventory.sh** — Scans running VMs via `virsh`, waits for IPs, generates `.vagrant/inventory.yml`.
-- **scripts/generate-vnc.sh** — Detects VNC clients and ports, generates `.vagrant/open-vnc.sh`.
-- **scripts/flush-libvirt.sh** — Nukes all non-default libvirt resources and restores defaults.
-
-## File Explanations
-
-- **Vagrantfile** — Defines VMs (cp-* and worker-*), downloads Talos ISO, configures libvirt (nested virt, serial logs in `.vagrant/talos-logs`). No provisioning; relies on Ansible for config.
+- **Vagrantfile** — Defines VMs (cp-1, cp-2, worker-1, etc.), downloads Talos ISO, configures libvirt (nested virt, serial logs in `.vagrant/talos-logs`). No provisioning; relies on Ansible for config.
 - **Makefile** — Central orchestrator with defaults and env overrides. Chains commands (e.g., `up` calls inventory + VNC).
 - **scripts/install-deps.sh** — Installs packages/groups; loads KVM module.
 - **scripts/generate-inventory.sh** — Scans running VMs via `virsh`, waits for IPs, generates `.vagrant/inventory.yml` with `talos_controlplane`/`talos_workers` groups and `cluster_name: vagrant`.

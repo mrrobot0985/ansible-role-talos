@@ -6,7 +6,7 @@ This tutorial walks you through running the role against local Talos VMs using t
 
 - 1 control-plane node booted from the Talos ISO
 - 3 worker nodes booted from the Talos ISO
-- A `.talos/generated/` documentation site with live node facts (when docs are enabled)
+- Final machineconfigs written to `.talos/generated/` for review
 
 ## Prerequisites
 
@@ -39,18 +39,7 @@ ansible-playbook -i .vagrant/inventory.yml tests/test.yml
 
 The role gathers live facts from every VM, generates machineconfigs, and writes them to `.talos/generated/` for review. No changes are applied to the nodes.
 
-## Step 4 -- Review Generated Documentation
-
-The role writes browsable documentation to `.talos/generated/` (when `talos_generate_docs: true`):
-
-```bash
-cd .talos/generated
-mkdocs serve
-```
-
-Open `http://127.0.0.1:8000` to view the Material-themed site with per-node pages, cluster overview, and structured YAML data.
-
-## Step 5 -- Apply and Bootstrap
+## Step 4 -- Apply and Bootstrap
 
 ```bash
 ansible-playbook -i .vagrant/inventory.yml tests/test.yml \
@@ -60,7 +49,7 @@ ansible-playbook -i .vagrant/inventory.yml tests/test.yml \
 
 The role applies machineconfigs, waits for reboots, bootstraps etcd on the first control plane, fetches kubeconfig, and waits for all nodes to become Ready.
 
-## Step 6 -- Verify
+## Step 5 -- Verify
 
 ```bash
 export KUBECONFIG=.talos/kubeconfig

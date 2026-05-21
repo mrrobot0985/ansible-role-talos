@@ -45,7 +45,7 @@ Create `site.yml`:
 ansible-playbook -i inventory.yml site.yml
 ```
 
-The role generates configs and reports but does **not** touch the nodes. Review `.talos/generated/` before proceeding.
+The role generates configs but does **not** touch the nodes. Review `.talos/generated/` (final machineconfigs) before proceeding.
 
 ## Step 4 — Deploy
 

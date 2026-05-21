@@ -26,6 +26,3 @@
 
 - import_tasks: gather-networking.yml
   tags: [facts, networking]
-
-- import_tasks: generate-report.yml
-  tags: [facts, node_report]

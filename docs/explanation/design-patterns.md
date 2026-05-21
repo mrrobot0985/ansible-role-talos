@@ -10,7 +10,7 @@ Every task that invokes `talosctl` or `kubectl` runs on `localhost` (the Ansible
 
 ## Dry-Run by Default
 
-The role ships with `talos_apply_dry_run: true`. The first run generates configs, patches, and reports without applying anything. Review `.talos/generated/` to confirm correctness, then flip to `false` for the real deployment.
+The role ships with `talos_apply_dry_run: true`. The first run generates configs and patches without applying anything. Review `.talos/generated/` (final machineconfigs) to confirm correctness, then flip to `false` for the real deployment.
 
 ## Idempotency
 

@@ -28,19 +28,6 @@
   delegate_to: localhost
   tags: setup
 
-- name: Create docs directories
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    mode: "0700"
-  loop:
-    - "{{ talos_docs_dir }}/docs/nodes"
-    - "{{ talos_docs_dir }}/data/nodes"
-  run_once: true
-  delegate_to: localhost
-  tags: [setup, docs]
-  when: talos_generate_docs | bool
-
 - name: Ignore .talos in git
   ansible.builtin.copy:
     content: |
@@ -82,7 +69,7 @@
 - import_tasks: install-tools.yml
   run_once: true
   delegate_to: localhost
-  tags: [setup, talosctl, kubectl, yq, docs, mkdocs]
+  tags: [setup, talosctl, kubectl, yq]
 
 - name: Verify node is in maintenance mode
   ansible.builtin.command: talosctl get machinestatus -o json --insecure -n {{ talos_ip }}

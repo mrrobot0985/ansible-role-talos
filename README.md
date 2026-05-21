@@ -28,7 +28,7 @@ automation, not a workaround.
 
 ## Limitations
 
-- **Smart disk selection** is heuristic-based (smallest non-removable, writable disk ≥4 GB). It may fail on exotic hardware (RAID, multipath, or very small NVMe partitions). Review `.talos/reports/` when in doubt.
+- **Smart disk selection** is heuristic-based (smallest non-removable, writable disk ≥4 GB). It may fail on exotic hardware (RAID, multipath, or very small NVMe partitions). Check `talos_facts.usable_disks` in the Ansible output when in doubt.
 - **IPv6 VIP is not supported** — The VIP itself (used by keepalived/kube-vip) remains IPv4-only. IPv6 dual-stack addresses are detected, filtered, and reported in `talos_network_global.cluster_subnet_v6`, but the VIP is always IPv4.
 - **IPv6-only networks are not supported** — At least one routable IPv4 address per node is required for VIP calculation and endpoint discovery.
 
@@ -46,7 +46,7 @@ Dry-run first (safe default — generates configs without touching nodes):
 ansible-playbook -i inventory.yml site.yml
 ```
 
-Review `.talos/generated/`, then deploy for real:
+Review `.talos/generated/` (final machineconfigs), then deploy for real:
 
 ```bash
 ansible-playbook -i inventory.yml site.yml \
