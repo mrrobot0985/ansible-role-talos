@@ -59,6 +59,17 @@ jobs:
           sudo apt install -y vagrant
           vagrant plugin install vagrant-libvirt
 
+      - name: Ensure libvirt default pool and network exist
+        run: |
+          sudo mkdir -p /var/lib/libvirt/images
+          sudo virsh pool-define-as default dir --target /var/lib/libvirt/images 2>/dev/null || true
+          sudo virsh pool-build default 2>/dev/null || true
+          sudo virsh pool-start default 2>/dev/null || true
+          sudo virsh pool-autostart default 2>/dev/null || true
+          sudo virsh net-define /usr/share/libvirt/networks/default.xml 2>/dev/null || true
+          sudo virsh net-start default 2>/dev/null || true
+          sudo virsh net-autostart default 2>/dev/null || true
+
       - name: Run Molecule
         run: |
           export TALOS_VERSION=${{ matrix.talos_version }}

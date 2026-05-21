@@ -46,8 +46,8 @@ if ! virsh pool-info default >/dev/null 2>&1; then
   sudo chown libvirt-qemu:kvm /var/lib/libvirt/images 2>/dev/null || true
   virsh pool-define-as default dir --target /var/lib/libvirt/images 2>/dev/null || true
   virsh pool-build default 2>/dev/null || true
-  virsh pool-start default 2>/dev/null || true
-  virsh pool-autostart default 2>/dev/null || true
 fi
+virsh pool-start default 2>/dev/null || true
+virsh pool-autostart default 2>/dev/null || true
 
 echo "LIBVIRT FLUSHED. DEFAULTS RESTORED."
