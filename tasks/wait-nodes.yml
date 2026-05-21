@@ -6,7 +6,7 @@
     host: "{{ talos_ip }}"
     port: 50000
     state: stopped
-    timeout: 300
+    timeout: 600
     delay: 10
   delegate_to: localhost
   when:
@@ -19,7 +19,7 @@
     host: "{{ talos_ip }}"
     port: 50000
     state: started
-    timeout: 600
+    timeout: 900
     delay: 15
   delegate_to: localhost
   when:
@@ -32,7 +32,7 @@
     host: "{{ talos_ip }}"
     port: 50000
     state: started
-    timeout: 600
+    timeout: 900
     delay: 15
   delegate_to: localhost
   when:
@@ -45,7 +45,7 @@
     host: "{{ talos_ip }}"
     port: 50000
     state: started
-    timeout: 300
+    timeout: 600
     delay: 15
   delegate_to: localhost
   when:

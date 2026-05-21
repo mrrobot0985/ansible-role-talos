@@ -6,7 +6,7 @@
     host: "{{ talos_ip }}"
     port: 50000
     state: started
-    timeout: 300
+    timeout: 600
     delay: 15
   delegate_to: localhost
   tags: facts

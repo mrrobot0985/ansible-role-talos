@@ -29,6 +29,9 @@
   changed_when: false
   tags: [facts, resources]
   register: _mc_raw
+  retries: 3
+  delay: 5
+  until: _mc_raw.rc == 0
 
 - name: Parse machineconfig
   ansible.builtin.set_fact:

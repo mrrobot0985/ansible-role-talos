@@ -82,7 +82,7 @@
     host: "{{ talos_vip | split('/') | first }}"
     port: 6443
     state: started
-    timeout: 300
+    timeout: 600
     delay: 10
   delegate_to: localhost
   run_once: true
@@ -94,7 +94,7 @@
     host: "{{ hostvars[groups.talos_controlplane[0]].talos_ip }}"
     port: 6443
     state: started
-    timeout: 300
+    timeout: 600
     delay: 10
   delegate_to: localhost
   run_once: true

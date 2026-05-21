@@ -19,7 +19,6 @@ jobs:
     # Gate: skip on forks or when no self-hosted runner is available.
     # For self-hosted runs, override runs-on to [self-hosted, linux, kvm]
     if: github.repository == 'mrrobot0985/ansible-role-talos'
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
