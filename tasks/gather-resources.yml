@@ -29,14 +29,16 @@
   changed_when: false
   tags: [facts, resources]
   register: _mc_raw
-  retries: 3
+  retries: 10
   delay: 5
   until: _mc_raw.rc == 0
+  when: not is_maintenance | bool
 
 - name: Parse machineconfig
   ansible.builtin.set_fact:
     talos_machineconfig_v1alpha1: "{{ _mc_raw.stdout | talos_parse_resource(parse_mode='json_single') }}"
   tags: [facts, resources]
+  when: not is_maintenance | bool
 
 - name: Get machine status
   ansible.builtin.command: >-

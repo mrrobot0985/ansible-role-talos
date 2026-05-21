@@ -11,6 +11,17 @@
   delegate_to: localhost
   tags: facts
 
+- name: Wait for Talos API to be fully ready
+  ansible.builtin.command: >-
+    talosctl get machinestatus -o json --insecure -n {{ talos_ip }}
+  delegate_to: localhost
+  changed_when: false
+  register: _api_ready
+  retries: 30
+  delay: 10
+  until: _api_ready.rc == 0
+  tags: facts
+
 - name: Set apply mode based on dry-run flag
   ansible.builtin.set_fact:
     talos_apply_mode: >-

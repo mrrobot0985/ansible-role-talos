@@ -7,7 +7,6 @@
     port: 50000
     state: stopped
     timeout: 600
-    delay: 10
   delegate_to: localhost
   when:
     - not talos_apply_dry_run | bool
